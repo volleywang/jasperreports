@@ -133,39 +133,39 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 		sheet.setColumnWidth(index, width);
 	}
 
-	protected void setRowHeight(int y, int lastRowHeight)
+	protected void setRowHeight(int rowIndex, int lastRowHeight)
 	{
-		row = sheet.getRow((short)y);		
+		row = sheet.getRow((short)rowIndex);		
 		if (row == null)
 		{
-			row = sheet.createRow((short)y);
+			row = sheet.createRow((short)rowIndex);
 		}
 		
 		row.setHeightInPoints((short)lastRowHeight);
 	}
 
-	protected void setCell(int x, int y)
+	protected void setCell(int colIndex, int rowIndex)
 	{
-		HSSFCell emptyCell = row.getCell((short)x);
+		HSSFCell emptyCell = row.getCell((short)colIndex);
 		if (emptyCell == null)
 		{
-			emptyCell = row.createCell((short)x);
+			emptyCell = row.createCell((short)colIndex);
 			emptyCell.setCellStyle(emptyCellStyle);
 		}
 	}
 
-	protected void addBlankCell(int x, int y)
+	protected void addBlankCell(int colIndex, int rowIndex)
 	{
 	}
 
 	/**
 	 *
 	 */
-	protected void exportLine(JRPrintLine line, JRExporterGridCell gridCell, int x, int y)
+	protected void exportLine(JRPrintLine line, JRExporterGridCell gridCell, int colIndex, int rowIndex)
 	{
 		if (gridCell.colSpan > 1 || gridCell.rowSpan > 1)
 		{
-			sheet.addMergedRegion(new Region(y, (short)x, (y + gridCell.rowSpan - 1), (short)(x + gridCell.colSpan - 1)));
+			sheet.addMergedRegion(new Region(rowIndex, (short)colIndex, (rowIndex + gridCell.rowSpan - 1), (short)(colIndex + gridCell.colSpan - 1)));
 		}
 
 		short forecolor = getNearestColor(line.getForecolor()).getIndex();
@@ -190,7 +190,7 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 				forecolor
 				);
 
-		cell = row.createCell((short)x);
+		cell = row.createCell((short)colIndex);
 		cell.setEncoding(HSSFCell.ENCODING_UTF_16);
 		cell.setCellValue("");
 		cell.setCellStyle(cellStyle);
@@ -200,11 +200,11 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 	/**
 	 *
 	 */
-	protected void exportRectangle(JRPrintElement element, JRExporterGridCell gridCell, int x, int y)
+	protected void exportRectangle(JRPrintElement element, JRExporterGridCell gridCell, int colIndex, int rowIndex)
 	{
 		if (gridCell.colSpan > 1 || gridCell.rowSpan > 1)
 		{
-			sheet.addMergedRegion(new Region(y, (short)x, (y + gridCell.rowSpan - 1), (short)(x + gridCell.colSpan - 1)));
+			sheet.addMergedRegion(new Region(rowIndex, (short)colIndex, (rowIndex + gridCell.rowSpan - 1), (short)(colIndex + gridCell.colSpan - 1)));
 		}
 
 		short forecolor = getNearestColor(element.getForecolor()).getIndex();
@@ -237,7 +237,7 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 				backcolor
 				);
 
-		cell = row.createCell((short)x);
+		cell = row.createCell((short)colIndex);
 		cell.setEncoding(HSSFCell.ENCODING_UTF_16);
 		cell.setCellValue("");
 		cell.setCellStyle(cellStyle);
@@ -248,7 +248,7 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 	/**
 	 *
 	 */
-	protected void exportText(JRPrintText textElement, JRExporterGridCell gridCell, int x, int y)
+	protected void exportText(JRPrintText textElement, JRExporterGridCell gridCell, int colIndex, int rowIndex)
 	{
 		JRStyledText styledText = getStyledText(textElement);
 
@@ -257,11 +257,11 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 			return;
 		}
 
-		JRFont font = textElement.getFont();
-		if (font == null)
-		{
-			font = getDefaultFont();
-		}
+		JRFont font = textElement;//.getFont();FIXME STYLE test this
+//		if (font == null)
+//		{
+//			font = getDefaultFont();
+//		}
 
 		short forecolor = getNearestColor(textElement.getForecolor()).getIndex();
 
@@ -280,38 +280,26 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 			backcolor = getNearestColor(textElement.getBackcolor()).getIndex();
 		}
 
-		short topBorder = HSSFCellStyle.BORDER_NONE;
-		short topBorderColor = backcolor;
-		short leftBorder = HSSFCellStyle.BORDER_NONE;
-		short leftBorderColor = backcolor;
-		short bottomBorder = HSSFCellStyle.BORDER_NONE;
-		short bottomBorderColor = backcolor;
-		short rightBorder = HSSFCellStyle.BORDER_NONE;
-		short rightBorderColor = backcolor;
-		
-		if (textElement.getBox() != null)
-		{
-			topBorder = getBorder(textElement.getBox().getTopBorder()); 
-			topBorderColor = 
-				getNearestColor(
-					textElement.getBox().getTopBorderColor() == null ? textElement.getForecolor() : textElement.getBox().getTopBorderColor()
-					).getIndex();
-			leftBorder = getBorder(textElement.getBox().getLeftBorder()); 
-			leftBorderColor = 
-				getNearestColor(
-					textElement.getBox().getLeftBorderColor() == null ? textElement.getForecolor() : textElement.getBox().getLeftBorderColor()
-					).getIndex();
-			bottomBorder = getBorder(textElement.getBox().getBottomBorder()); 
-			bottomBorderColor = 
-				getNearestColor(
-					textElement.getBox().getBottomBorderColor() == null ? textElement.getForecolor() : textElement.getBox().getBottomBorderColor()
-					).getIndex();
-			rightBorder = getBorder(textElement.getBox().getRightBorder()); 
-			rightBorderColor = 
-				getNearestColor(
-					textElement.getBox().getRightBorderColor() == null ? textElement.getForecolor() : textElement.getBox().getRightBorderColor()
-					).getIndex();
-		}
+		short topBorder = getBorder(textElement.getTopBorder()); 
+		short topBorderColor = 
+			getNearestColor(
+				textElement.getTopBorderColor() == null ? textElement.getForecolor() : textElement.getTopBorderColor()
+				).getIndex();
+		short leftBorder = getBorder(textElement.getLeftBorder()); 
+		short leftBorderColor = 
+			getNearestColor(
+				textElement.getLeftBorderColor() == null ? textElement.getForecolor() : textElement.getLeftBorderColor()
+				).getIndex();
+		short bottomBorder = getBorder(textElement.getBottomBorder()); 
+		short bottomBorderColor = 
+			getNearestColor(
+				textElement.getBottomBorderColor() == null ? textElement.getForecolor() : textElement.getBottomBorderColor()
+				).getIndex();
+		short rightBorder = getBorder(textElement.getRightBorder()); 
+		short rightBorderColor = 
+			getNearestColor(
+				textElement.getRightBorderColor() == null ? textElement.getForecolor() : textElement.getRightBorderColor()
+				).getIndex();
 		
 		HSSFCellStyle cellStyle = 
 			getLoadedCellStyle(
@@ -333,28 +321,28 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 
 		if (gridCell.colSpan > 1 || gridCell.rowSpan > 1)
 		{
-			sheet.addMergedRegion(new Region(y, (short)x, (y + gridCell.rowSpan - 1), (short)(x + gridCell.colSpan - 1)));
+			sheet.addMergedRegion(new Region(rowIndex, (short)colIndex, (rowIndex + gridCell.rowSpan - 1), (short)(colIndex + gridCell.colSpan - 1)));
 
 			for(int i = 0; i < gridCell.rowSpan; i++)
 			{
-				HSSFRow spanRow = sheet.getRow(y + i); 
+				HSSFRow spanRow = sheet.getRow(rowIndex + i); 
 				if (spanRow == null)
 				{
-					spanRow = sheet.createRow(y + i);
+					spanRow = sheet.createRow(rowIndex + i);
 				}
 				for(int j = 0; j < gridCell.colSpan; j++)
 				{
-					HSSFCell spanCell = spanRow.getCell((short)(x + j));
+					HSSFCell spanCell = spanRow.getCell((short)(colIndex + j));
 					if (spanCell == null)
 					{
-						spanCell = spanRow.createCell((short)(x + j));
+						spanCell = spanRow.createCell((short)(colIndex + j));
 					}
 					spanCell.setCellStyle(cellStyle);
 				}
 			}
 		}
 
-		cell = row.createCell((short)x);
+		cell = row.createCell((short)colIndex);
 		cell.setEncoding(HSSFCell.ENCODING_UTF_16);
 		if (isAutoDetectCellType)
 		{
@@ -482,7 +470,7 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 			if (
 				cf.getFontName().equals(fontName) &&
 				(cf.getColor() == forecolor) &&
-				(cf.getFontHeightInPoints() == (short)font.getSize()) &&
+				(cf.getFontHeightInPoints() == (short)font.getFontSize()) &&
 				((cf.getUnderline() == HSSFFont.U_SINGLE)?(font.isUnderline()):(!font.isUnderline())) &&
 				(cf.getStrikeout() == font.isStrikeThrough()) &&
 				((cf.getBoldweight() == HSSFFont.BOLDWEIGHT_BOLD)?(font.isBold()):(!font.isBold())) &&
@@ -500,7 +488,7 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 
 			cellFont.setFontName(fontName);
 			cellFont.setColor(forecolor);
-			cellFont.setFontHeightInPoints((short)font.getSize());
+			cellFont.setFontHeightInPoints((short)font.getFontSize());
 
 			if (font.isUnderline())
 			{
@@ -650,7 +638,7 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 		return border;
 	}
 
-	protected void exportImage(JRPrintImage image, JRExporterGridCell gridCell, int x, int y)
+	protected void exportImage(JRPrintImage image, JRExporterGridCell gridCell, int colIndex, int rowIndex)
 	{
 		//nothing
 	}
