@@ -459,7 +459,7 @@ public class TextMeasurer implements JRTextMeasurer
 		
 		String text = styledText.getText();
 		if (text.length() == 0 //this should not happen but still checking
-				|| text.indexOf('\n') >= 0 || text.indexOf('\b') >= 0)
+				|| text.indexOf('\n') >= 0 || text.indexOf('\t') >= 0)
 		{
 			// we don't handle newlines and tabs here
 			return false;
