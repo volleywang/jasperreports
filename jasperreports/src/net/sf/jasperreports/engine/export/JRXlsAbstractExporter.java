@@ -639,8 +639,10 @@ public abstract class JRXlsAbstractExporter extends JRAbstractExporter
 						// we need to count all sheets generated for all exported documents
 						sheetIndex++;
 						sheetNamesIndex++;
-
-						setFreezePane(gridRowFreezeIndex, gridColumnFreezeIndex);
+						if(gridRowFreezeIndex > 0 || gridColumnFreezeIndex > 0)
+						{
+							setFreezePane(gridRowFreezeIndex, gridColumnFreezeIndex);
+						}
 						/*   */
 						exportPage(page, /*xCuts*/null, /*startRow*/0);
 					}
@@ -654,7 +656,11 @@ public abstract class JRXlsAbstractExporter extends JRAbstractExporter
 					sheetIndex++;
 					sheetNamesIndex++;
 
-					setFreezePane(gridRowFreezeIndex, gridColumnFreezeIndex);
+					if(gridRowFreezeIndex > 0 || gridColumnFreezeIndex > 0)
+					{
+						setFreezePane(gridRowFreezeIndex, gridColumnFreezeIndex);
+					}
+					
 					
 					/*
 					 * Make a pass and calculate the X cuts for all pages on this sheet.
@@ -750,7 +756,10 @@ public abstract class JRXlsAbstractExporter extends JRAbstractExporter
 				skippedRows = y;
 				sheetIndex++;
 				sheetNamesIndex++;
-				setFreezePane(gridRowFreezeIndex, gridColumnFreezeIndex);
+				if(gridRowFreezeIndex > 0 || gridColumnFreezeIndex > 0)
+				{
+					setFreezePane(gridRowFreezeIndex, gridColumnFreezeIndex);
+				}
 			}
 			
 			if (
