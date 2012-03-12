@@ -694,15 +694,18 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 			endCreateCell(cellStyle);
 		}
 		
-		String anchorName = textElement.getAnchorName();
-		if(anchorName != null)
+		if(!ignoreAnchors)
 		{
-			HSSFName aName = workbook.createName();
-//			aName.setNameName(JRStringUtil.getJavaIdentifier(anchorName));
-			aName.setSheetIndex(workbook.getSheetIndex(sheet));
-			CellReference cRef = new CellReference(rowIndex, colIndex);
-			aName.setRefersToFormula(cRef.formatAsString());
-			anchorNames.put(anchorName, aName);
+			String anchorName = textElement.getAnchorName();
+			if(anchorName != null)
+			{
+				HSSFName aName = workbook.createName();
+	//			aName.setNameName(JRStringUtil.getJavaIdentifier(anchorName));
+				aName.setSheetIndex(workbook.getSheetIndex(sheet));
+				CellReference cRef = new CellReference(rowIndex, colIndex);
+				aName.setRefersToFormula(cRef.formatAsString());
+				anchorNames.put(anchorName, aName);
+			}
 		}
 
 		setHyperlinkCell(textElement);
@@ -1649,21 +1652,24 @@ public class JRXlsExporter extends JRXlsAbstractExporter
 				}
 				case LOCAL_ANCHOR :
 				{
-					href = hyperlink.getHyperlinkAnchor();
-					if (href != null)
+					if(!ignoreAnchors)
 					{
-						link = createHelper.createHyperlink(Hyperlink.LINK_DOCUMENT);
-						if(anchorLinks.containsKey(href))
+						href = hyperlink.getHyperlinkAnchor();
+						if (href != null)
 						{
-							(anchorLinks.get(href)).add(link);
+							link = createHelper.createHyperlink(Hyperlink.LINK_DOCUMENT);
+							if(anchorLinks.containsKey(href))
+							{
+								(anchorLinks.get(href)).add(link);
+							}
+							else
+							{
+								List<Hyperlink> hrefList = new ArrayList<Hyperlink>();
+								hrefList.add(link);
+								anchorLinks.put(href, hrefList);
+							}
+							
 						}
-						else
-						{
-							List<Hyperlink> hrefList = new ArrayList<Hyperlink>();
-							hrefList.add(link);
-							anchorLinks.put(href, hrefList);
-						}
-						
 					}
 					break;
 					

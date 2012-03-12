@@ -211,6 +211,17 @@ public abstract class JRXlsAbstractExporter extends JRAbstractExporter
 	public static final String PROPERTY_FREEZE_COLUMN_EDGE = JRProperties.PROPERTY_PREFIX + "export.xls.freeze.column.edge";
 	
 	
+	/**
+	 * This flag property indicates whether anchors should be ignored when element is exported to Excel.
+	 *  Allowed values are:
+	 * <ul>
+	 * <li><code>true</code></li>
+	 * <li><code>false</code> - this is the default value.</li>
+	 * </ul>
+	 */
+	public static final String PROPERTY_IGNORE_ANCHORS = JRProperties.PROPERTY_PREFIX + "export.xls.ignore.anchors";
+	
+	
 	
 	public static final int MAX_ROW_INDEX = 65535;
 	public static final int MAX_COLUMN_INDEX = 255;
@@ -310,6 +321,9 @@ public abstract class JRXlsAbstractExporter extends JRAbstractExporter
 	
 	protected boolean isFreezeRowEdge;
 	protected boolean isFreezeColumnEdge;
+	
+	protected boolean ignoreAnchors;
+	
 	/**
 	 *
 	 */
@@ -569,6 +583,15 @@ public abstract class JRXlsAbstractExporter extends JRAbstractExporter
 				jasperPrint,
 				PROPERTY_SHEET_DIRECTION
 				);
+		
+		ignoreAnchors = 
+				JRProperties.getBooleanProperty(
+					jasperPrint,
+					PROPERTY_IGNORE_ANCHORS,
+					false
+					);
+
+		
 		sheetDirection = sheetDirectionProp == null ? RunDirectionEnum.LTR : RunDirectionEnum.getByName(sheetDirectionProp);
 		
 		formatPatternsMap = (Map<String,String>)getParameter(JRXlsExporterParameter.FORMAT_PATTERNS_MAP);
