@@ -324,6 +324,8 @@ public abstract class JRXlsAbstractExporter extends JRAbstractExporter
 	
 	protected boolean ignoreAnchors;
 	
+	protected String invalidCharReplacement;
+
 	/**
 	 *
 	 */
@@ -610,8 +612,18 @@ public abstract class JRXlsAbstractExporter extends JRAbstractExporter
 				Math.max(0, getColumnIndex(JRProperties.getProperty(jasperPrint, PROPERTY_FREEZE_COLUMN))), 
 				MAX_COLUMN_INDEX
 				);		
+		ignoreAnchors = JRProperties.getBooleanProperty(jasperPrint,	PROPERTY_IGNORE_ANCHORS, false);
+		if(jasperPrint.hasProperties() && jasperPrint.getPropertiesMap().containsProperty(JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS))
+		{
+			// allows null values for the property
+			invalidCharReplacement = jasperPrint.getProperty(JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS);
+		}
+		else
+		{
+			invalidCharReplacement = JRProperties.getProperty(jasperPrint, JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS);
+		}
 	}
-
+	
 	protected abstract void setBackground();
 
 	protected void exportReportToStream(OutputStream os) throws JRException

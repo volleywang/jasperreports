@@ -73,9 +73,11 @@ import net.sf.jasperreports.engine.export.JRExportProgressMonitor;
 import net.sf.jasperreports.engine.export.JRExporterGridCell;
 import net.sf.jasperreports.engine.export.JRGridLayout;
 import net.sf.jasperreports.engine.export.JRHyperlinkProducer;
+import net.sf.jasperreports.engine.export.JRXmlExporter;
 import net.sf.jasperreports.engine.export.LengthUtil;
 import net.sf.jasperreports.engine.export.OccupiedGridCell;
 import net.sf.jasperreports.engine.export.zip.FileBufferedZipEntry;
+import net.sf.jasperreports.engine.type.HyperlinkTypeEnum;
 import net.sf.jasperreports.engine.type.LineDirectionEnum;
 import net.sf.jasperreports.engine.type.ModeEnum;
 import net.sf.jasperreports.engine.util.JRProperties;
@@ -139,6 +141,7 @@ public class JRDocxExporter extends JRAbstractExporter
 	protected int pageIndex;
 	protected int tableIndex;
 	protected boolean startPage;
+	protected String invalidCharReplacement;
 
 	/**
 	 * @deprecated
@@ -155,6 +158,8 @@ public class JRDocxExporter extends JRAbstractExporter
 	protected boolean deepGrid;
 
 	protected boolean flexibleRowHeight;
+	
+	protected long bookmarkIndex;
 	
 
 	protected class ExporterContext extends BaseExporterContext implements JRDocxExporterContext
@@ -356,7 +361,8 @@ public class JRDocxExporter extends JRAbstractExporter
 		for(reportIndex = 0; reportIndex < jasperPrintList.size(); reportIndex++)
 		{
 			setJasperPrint(jasperPrintList.get(reportIndex));
-
+			setExporterHints();
+			bookmarkIndex = 0;
 			List<JRPrintPage> pages = jasperPrint.getPages();
 			if (pages != null && pages.size() > 0)
 			{
@@ -783,7 +789,8 @@ public class JRDocxExporter extends JRAbstractExporter
 				iterator.getAttributes(), 
 				text.substring(iterator.getIndex(), runLimit),
 				locale,
-				hiddenText
+				hiddenText,
+				invalidCharReplacement
 				);
 			
 			if (localHyperlink)
@@ -1337,7 +1344,10 @@ public class JRDocxExporter extends JRAbstractExporter
 //			docHelper.write(">\n");
 
 			docHelper.write("<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>\n");
-			docHelper.write("<w:r><w:instrText xml:space=\"preserve\"> HYPERLINK \"" + JRStringUtil.xmlEncode(href) + "\"");
+			String localType = (HyperlinkTypeEnum.LOCAL_ANCHOR == link.getHyperlinkTypeValue() || 
+					HyperlinkTypeEnum.LOCAL_PAGE == link.getHyperlinkTypeValue()) ? "\\l " : "";
+					
+			docHelper.write("<w:r><w:instrText xml:space=\"preserve\"> HYPERLINK " + localType +"\"" + JRStringUtil.xmlEncode(href,invalidCharReplacement) + "\"");
 
 			String target = getHyperlinkTarget(link);//FIXMETARGET
 			if (target != null)
@@ -1348,7 +1358,7 @@ public class JRDocxExporter extends JRAbstractExporter
 			String tooltip = link.getHyperlinkTooltip(); 
 			if (tooltip != null)
 			{
-				docHelper.write(" \\o \"" + JRStringUtil.xmlEncode(tooltip) + "\"");
+				docHelper.write(" \\o \"" + JRStringUtil.xmlEncode(tooltip, invalidCharReplacement) + "\"");
 			}
 
 			docHelper.write(" </w:instrText></w:r>\n");
@@ -1513,5 +1523,18 @@ public class JRDocxExporter extends JRAbstractExporter
 		return DOCX_EXPORTER_KEY;
 	}
 
+	protected void setExporterHints()
+	{
+		if(jasperPrint.hasProperties() && jasperPrint.getPropertiesMap().containsProperty(JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS))
+		{
+			// allows null values for the property
+			invalidCharReplacement = jasperPrint.getProperty(JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS);
+		}
+		else
+		{
+			invalidCharReplacement = JRProperties.getProperty(jasperPrint, JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS);
+		}
+	}
+	
 }
 

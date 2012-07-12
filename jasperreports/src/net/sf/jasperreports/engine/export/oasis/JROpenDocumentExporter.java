@@ -76,9 +76,11 @@ import net.sf.jasperreports.engine.export.JRExportProgressMonitor;
 import net.sf.jasperreports.engine.export.JRExporterGridCell;
 import net.sf.jasperreports.engine.export.JRGridLayout;
 import net.sf.jasperreports.engine.export.JRHyperlinkProducer;
+import net.sf.jasperreports.engine.export.JRXmlExporter;
 import net.sf.jasperreports.engine.export.zip.ExportZipEntry;
 import net.sf.jasperreports.engine.export.zip.FileBufferedZipEntry;
 import net.sf.jasperreports.engine.type.ModeEnum;
+import net.sf.jasperreports.engine.util.JRProperties;
 import net.sf.jasperreports.engine.util.JRStringUtil;
 import net.sf.jasperreports.engine.util.JRStyledText;
 import net.sf.jasperreports.engine.util.JRTextAttribute;
@@ -115,6 +117,8 @@ public abstract class JROpenDocumentExporter extends JRAbstractExporter
 	protected int pageIndex;
 	protected int tableIndex;
 	protected boolean startPage;
+	
+	protected String invalidCharReplacement;
 
 	/**
 	 *
@@ -297,7 +301,7 @@ public abstract class JROpenDocumentExporter extends JRAbstractExporter
 		for(reportIndex = 0; reportIndex < jasperPrintList.size(); reportIndex++)
 		{
 			setJasperPrint(jasperPrintList.get(reportIndex));
-
+			setExporterHints();
 			List<JRPrintPage> pages = jasperPrint.getPages();
 			if (pages != null && pages.size() > 0)
 			{
@@ -726,7 +730,7 @@ public abstract class JROpenDocumentExporter extends JRAbstractExporter
 		
 		if (text != null)
 		{
-			tempBodyWriter.write(Utility.replaceNewLineWithLineBreak(JRStringUtil.xmlEncode(text)));//FIXMEODT try something nicer for replace
+			tempBodyWriter.write(Utility.replaceNewLineWithLineBreak(JRStringUtil.xmlEncode(text, invalidCharReplacement)));//FIXMEODT try something nicer for replace
 		}
 
 		if (localHyperlink)
@@ -1161,6 +1165,19 @@ public abstract class JROpenDocumentExporter extends JRAbstractExporter
 		}
 	}
 	
+	protected void setExporterHints()
+	{
+		if(jasperPrint.hasProperties() && jasperPrint.getPropertiesMap().containsProperty(JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS))
+		{
+			// allows null values for the property
+			invalidCharReplacement = jasperPrint.getProperty(JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS);
+		}
+		else
+		{
+			invalidCharReplacement = JRProperties.getProperty(jasperPrint, JRXmlExporter.PROPERTY_REPLACE_INVALID_CHARS);
+		}
+	}
+
 	protected abstract void exportAnchor(String anchorName) throws IOException;
 
 	protected abstract ExporterNature getExporterNature(ExporterFilter filter);
