@@ -1230,7 +1230,7 @@ public class JRXlsxExporter extends JRXlsAbstractExporter
 			gridCell, rowIndex, colIndex, textValue, 
 			getConvertedPattern(text, pattern), 
 			getTextLocale(text), 
-			isWrapText(gridCell.getElement()) || nature.getColumnAutoFit(gridCell.getElement()), 
+			isWrapText(gridCell.getElement()) || Boolean.TRUE.equals(nature.getColumnAutoFit(gridCell.getElement())), 
 			isCellHidden(gridCell.getElement()), 
 			isCellLocked(gridCell.getElement())
 			);
