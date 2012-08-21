@@ -3,6 +3,8 @@ package net.sf.jasperreports.data.mondrian;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.util.logging.Logger;
 
 import javax.sql.DataSource;
 
@@ -46,6 +48,10 @@ public class SimpleSQLDataSource implements DataSource {
 	public Connection getConnection(String username, String password)
 			throws SQLException {
 		return connection;
+	}
+
+	public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+		throw new SQLFeatureNotSupportedException();
 	}
 
 }
