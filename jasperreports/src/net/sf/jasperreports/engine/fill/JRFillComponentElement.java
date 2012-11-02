@@ -260,4 +260,9 @@ public class JRFillComponentElement extends JRFillElement implements JRComponent
 		return filler;
 	}
 
+	public FillContainerContext getFillContainerContext()
+	{
+		return fillContainerContext;
+	}
+
 }
