@@ -1474,11 +1474,6 @@ public class JRXlsxExporter extends JRXlsAbstractExporter
 	}
 
 
-	protected void removeColumn(int col) {
-		//column width was already set to zero
-	}
-
-
 	protected void setBackground() {
 		// TODO Auto-generated method stub
 		
@@ -1501,11 +1496,6 @@ public class JRXlsxExporter extends JRXlsAbstractExporter
 	protected void setColumnWidth(int col, int width, boolean autoFit) 
 	{
 		sheetHelper.exportColumn(col, width, autoFit);
-	}
-
-
-	protected void updateColumn(int col, boolean autoFit) 
-	{
 	}
 
 
