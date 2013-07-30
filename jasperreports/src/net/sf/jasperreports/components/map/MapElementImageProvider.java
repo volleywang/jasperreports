@@ -46,6 +46,11 @@ import net.sf.jasperreports.engine.type.VerticalAlignEnum;
 public class MapElementImageProvider
 {
 	/**
+	 * The character count limit for a static map URL request
+	 */
+	public static Integer MAX_URL_LENGTH = 2048;
+	
+	/**
 	 * @deprecated Replaced by {@link #getImage(JasperReportsContext, JRGenericPrintElement)}.
 	 */
 	public static JRPrintImage getImage(JRGenericPrintElement element) throws JRException
@@ -68,7 +73,7 @@ public class MapElementImageProvider
 		String mapType = (String)element.getParameterValue(MapPrintElement.PARAMETER_MAP_TYPE);
 		String mapScale = (String)element.getParameterValue(MapPrintElement.PARAMETER_MAP_SCALE);
 		String mapFormat = (String)element.getParameterValue(MapPrintElement.PARAMETER_IMAGE_TYPE);
-		String language = (String)element.getParameterValue(MapPrintElement.PARAMETER_LANGUAGE);
+		String reqParams = (String)element.getParameterValue(MapPrintElement.PARAMETER_REQ_PARAMS);
 		String markers ="";
 		
 		List<Map<String,Object>> markerList = (List<Map<String,Object>>)element.getParameterValue(MapPrintElement.PARAMETER_MARKERS);
@@ -84,6 +89,8 @@ public class MapElementImageProvider
 					currentMarkers += size != null && size.length() > 0 ? "size:" + size + "%7C" : "";
 					String color = (String)map.get(MapPrintElement.PARAMETER_MARKER_COLOR);
 					currentMarkers += color != null && color.length() > 0 ? "color:0x" + color + "%7C" : "";
+					String label = (String)map.get(MapPrintElement.PARAMETER_MARKER_LABEL);
+					currentMarkers += label != null && label.length() > 0 ? "label:" + label.charAt(0) + "%7C" : "";
 					String icon = map.get(MapPrintElement.PARAMETER_MARKER_ICON_URL) != null 
 							? (String)map.get(MapPrintElement.PARAMETER_MARKER_ICON_URL) 
 							: (String)map.get(MapPrintElement.PARAMETER_MARKER_ICON);
@@ -113,10 +120,10 @@ public class MapElementImageProvider
 			+ (mapType == null ? "" : "&maptype=" + mapType)
 			+ (mapFormat == null ? "" : "&format=" + mapFormat)
 			+ (mapScale == null ? "" : "&scale=" + mapScale);
-		String otherParams = "&sensor=false" + (language == null ? "" : "&language=" + language);
-		//a static map url is limited to 2048 characters
-		imageLocation += (imageLocation.length() + markers.length() + otherParams.length() < 2048) ? markers + otherParams : otherParams;
+		String params = "&sensor=false" + (reqParams == null ? "" : reqParams);
 
+		//a static map url is limited to 2048 characters
+		imageLocation += (imageLocation.length() + markers.length() + params.length() < MAX_URL_LENGTH) ? markers + params : params;
 		JRBasePrintImage printImage = new JRBasePrintImage(element.getDefaultStyleProvider());
 		
 		printImage.setUUID(element.getUUID());
@@ -131,7 +138,7 @@ public class MapElementImageProvider
 		printImage.setLazy(false);
 		
 		//FIXMEMAP there are no scale image, alignment and onError attributes defined for the map element
-		printImage.setScaleImage(ScaleImageEnum.CLIP);
+		printImage.setScaleImage(ScaleImageEnum.RETAIN_SHAPE);
 		printImage.setHorizontalAlignment(HorizontalAlignEnum.LEFT);
 		printImage.setVerticalAlignment(VerticalAlignEnum.TOP);
 		

@@ -9,10 +9,10 @@
 	var infowindow;
 	global.jasperreports.map = {
 		data: {},
-		initGoogleMaps: function(language) {
+		initGoogleMaps: function(rp) {
 			if (!global.google) {
-				if(language) {
-					jasperreports.global.loadScript('_googleApi', 'http://maps.google.com/maps/api/js?sensor=false&callback=jasperreports.map.init&language='+language);
+				if(rp) {
+					jasperreports.global.loadScript('_googleApi', 'http://maps.google.com/maps/api/js?sensor=false&callback=jasperreports.map.init'+rp);
 				} else {
 					jasperreports.global.loadScript('_googleApi', 'http://maps.google.com/maps/api/js?sensor=false&callback=jasperreports.map.init');
 				}
@@ -81,7 +81,8 @@
 					    };
 				    if(markerProps['icon.url'] && markerProps['icon.url'].length > 0) jm.configureImage('icon', markerProps, markerOptions);
 				    else if (markerProps['icon'] && markerProps['icon'].length > 0) markerOptions['icon'] = markerProps['icon'];
-				    else if (markerProps['color'] && markerProps['color'].length > 0) markerOptions['icon'] = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2%7C' + markerProps['color'];
+				    else if (markerProps['color'] && markerProps['color'].length > 0) markerOptions['icon'] = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=' + ((markerProps['label'] && markerProps['label'].length > 0) ? markerProps['label'] : '%E2%80%A2')+ '%7C' + markerProps['color'];
+				    else if(markerProps['label'] && markerProps['label'].length > 0) markerOptions['icon'] = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=' + markerProps['label'] + '%7CFE7569';
 				    if(markerProps['shadow.url'] && markerProps['shadow.url'].length > 0) jm.configureImage('shadow', markerProps, markerOptions);
 				    for (j in markerProps) {
 						if (j.indexOf(".") < 0 && markerProps.hasOwnProperty(j) && !markerOptions.hasOwnProperty(j)) markerOptions[j] = markerProps[j];
