@@ -66,6 +66,7 @@ public class MapElementImageProvider
 		zoom = zoom == null ? MapPrintElement.DEFAULT_ZOOM : zoom;
 
 		String mapType = (String)element.getParameterValue(MapPrintElement.PARAMETER_MAP_TYPE);
+		String mapScale = (String)element.getParameterValue(MapPrintElement.PARAMETER_MAP_SCALE);
 		String mapFormat = (String)element.getParameterValue(MapPrintElement.PARAMETER_IMAGE_TYPE);
 		String language = (String)element.getParameterValue(MapPrintElement.PARAMETER_LANGUAGE);
 		String markers ="";
@@ -100,18 +101,17 @@ public class MapElementImageProvider
 			}
 		}
 
-		Integer mapScale = element.getParameterValue(MapPrintElement.PARAMETER_MAP_SCALE) == null ? 1 : Integer.valueOf((String)element.getParameterValue(MapPrintElement.PARAMETER_MAP_SCALE));
 		String imageLocation = 
 			"http://maps.google.com/maps/api/staticmap?center=" 
 			+ latitude 
 			+ "," 
 			+ longitude 
 			+ "&size=" 
-			+ element.getWidth() / mapScale
+			+ element.getWidth() 
 			+ "x" 
-			+ element.getHeight() / mapScale
+			+ element.getHeight() 
 			+ "&zoom="
-			+ Math.max(zoom - mapScale + 1, 0)
+			+ zoom
 			+ (mapType == null ? "" : "&maptype=" + mapType)
 			+ (mapFormat == null ? "" : "&format=" + mapFormat)
 			+ (mapScale == null ? "" : "&scale=" + mapScale);
