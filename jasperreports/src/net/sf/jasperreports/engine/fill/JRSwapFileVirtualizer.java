@@ -26,12 +26,15 @@ package net.sf.jasperreports.engine.fill;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import net.sf.jasperreports.engine.JRVirtualizable;
 import net.sf.jasperreports.engine.util.JRSwapFile;
+import net.sf.jasperreports.engine.util.StreamCompression;
 
 
 /**
@@ -44,6 +47,7 @@ public class JRSwapFileVirtualizer extends JRAbstractLRUVirtualizer
 {
 	private final JRSwapFile swap;
 	private final boolean swapOwner;
+	private final StreamCompression compression;
 	private final Map<String,JRSwapFile.SwapHandle> handles;
 	
 	
@@ -57,7 +61,7 @@ public class JRSwapFileVirtualizer extends JRAbstractLRUVirtualizer
 	 */
 	public JRSwapFileVirtualizer(int maxSize, JRSwapFile swap)
 	{
-		this(maxSize, swap, true);
+		this(maxSize, swap, true, null);
 	}
 
 	
@@ -72,10 +76,28 @@ public class JRSwapFileVirtualizer extends JRAbstractLRUVirtualizer
 	 */
 	public JRSwapFileVirtualizer(int maxSize, JRSwapFile swap, boolean swapOwner)
 	{
+		this(maxSize, swap, swapOwner, null);
+	}
+
+	
+	/**
+	 * Creates a virtualizer that uses a swap file.
+	 * 
+	 * @param maxSize the maximum size (in JRVirtualizable objects) of the paged in cache.
+	 * @param swap the swap file to use for data virtualization
+	 * @param swapOwner whether the virtualizer is the owner (single user) of the swap file.
+	 * If <code>true</code>, the virtualizer will dispose the swap file on
+	 * {@link #cleanup() cleanup}.
+	 * @param compression stream compression to apply to serialized data
+	 */
+	public JRSwapFileVirtualizer(int maxSize, JRSwapFile swap, boolean swapOwner,
+			StreamCompression compression)
+	{
 		super(maxSize);
 
 		this.swap = swap;
 		this.swapOwner = swapOwner;
+		this.compression = compression;
 		handles = Collections.synchronizedMap(new HashMap<String,JRSwapFile.SwapHandle>());
 	}
 
@@ -84,9 +106,11 @@ public class JRSwapFileVirtualizer extends JRAbstractLRUVirtualizer
 		if (!handles.containsKey(o.getUID()))
 		{
 			ByteArrayOutputStream bout = new ByteArrayOutputStream(3000);
-			writeData(o, bout);
-			byte[] data = bout.toByteArray();
+			OutputStream out = compression == null ? bout : compression.compressedOutput(bout);
+			writeData(o, out);
+			out.close();
 			
+			byte[] data = bout.toByteArray();
 			JRSwapFile.SwapHandle handle = swap.write(data);
 			handles.put(o.getUID(), handle);
 		}
@@ -104,7 +128,10 @@ public class JRSwapFileVirtualizer extends JRAbstractLRUVirtualizer
 		JRSwapFile.SwapHandle handle = handles.get(o.getUID());
 		byte[] data = swap.read(handle, !isReadOnly(o));
 
-		readData(o, new ByteArrayInputStream(data));
+		ByteArrayInputStream rawInput = new ByteArrayInputStream(data);
+		InputStream input = compression == null ? rawInput : compression.uncompressedInput(rawInput);
+		readData(o, input);
+		input.close();
 		
 		if (!isReadOnly(o))
 		{
