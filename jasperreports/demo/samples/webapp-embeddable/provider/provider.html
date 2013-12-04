@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+    <title>easyXDM Remote Provider</title>
+    <script type="text/javascript" src="../scripts/lib/json2/json2.js"></script>
+    <script type="text/javascript" src="../scripts/lib/easyXDM/easyXDM.debug.js"></script>
+    <script type="text/javascript" src="../scripts/lib/jquery/jquery-1.7.1.js"></script>
+    <script type="text/javascript">
+        var remote = new easyXDM.Rpc({
+            local: "name.html",
+            swf: "easyxdm.swf"
+        },{
+            remote: {
+                response : {}
+            },
+            local: {
+                request: function(url, settings){
+
+                    var id = (new Date()).getMilliseconds();
+
+                    $.ajax(url, settings).then(function(result, status, jqXhr){
+                        //TODO: replace with more generic approach
+                        remote.response(result, status, jqXhr, id, {
+
+                            "jasperreports-report-status" : jqXhr.getResponseHeader("jasperreports-report-status"),
+                            "Content-Type" : jqXhr.getResponseHeader("Content-Type"),
+                            "Transfer-Encoding": jqXhr.getResponseHeader("Transfer-Encoding")
+                            //etc
+
+                        });
+                        console.log("Remote response: ", arguments);
+                    }, function(error){
+                        remote.response(error)
+                    });
+
+                    return {
+                        url : url,
+                        settings : settings,
+                        id : id
+                    };
+                }
+            }
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

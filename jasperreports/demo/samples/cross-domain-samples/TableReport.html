@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Table JR Report</title>
+
+    <!--TODO: move 'require.js' inside 'jasper.js'-->
+    <script type='text/javascript' src="http://localhost:8080/jasperreports/scripts/require/require.js"></script>
+    <script type='text/javascript' src="http://localhost:8080/jasperreports/scripts/jasper.js"></script>
+    <script>
+        jasper("http://localhost:8080/jasperreports", function(require){
+
+            require(["jr/report/ReportViewer"], function (ReportViewer) {
+
+                window.reportViewer = new ReportViewer({uri: "reports/TableReport.jasper"});
+
+                reportViewer
+                        .render()
+                        .appendTo("#tableReport")
+
+            });
+
+        });
+    </script>
+</head>
+<body>
+    <div id="tableReport"></div>
+</body>
+</html>
