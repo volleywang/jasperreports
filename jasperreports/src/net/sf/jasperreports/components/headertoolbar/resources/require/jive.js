@@ -1,4 +1,4 @@
-define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.vm.css', 'jive.i18n'], function($, templates, css, jivei18n) {
+define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.vm.css', 'text!jive.i18n.tmpl'], function($, templates, css, jivei18nText) {
     var clickEventName = 'click';
 
     if(/Android|iPhone|iPad/i.test(navigator.userAgent) ) {
@@ -23,10 +23,11 @@ define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.
         getReportContainer: function() {
             return $('table.jrPage').closest('div.body');
         },
+        jivei18n: JSON.parse(jivei18nText),
         i18n: {
             get: function (key) {
-                if (jivei18n.hasOwnProperty(key)) {
-                    return jivei18n[key];
+                if (jive.jivei18n.hasOwnProperty(key)) {
+                    return jive.jivei18n[key];
                 } else {
                     return key;
                 }
@@ -1178,6 +1179,8 @@ define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.
                 scrolledTop = false,
                 scrolledLeft = false;
 
+            console.log('div#reportViewFrame .body: width: ' + scrollContainer.width());
+
             // Determine scroll direction and value
             if (it.scrollData.scrollTop != null) { // check previous scrollTop
                 if (scrollContainer.scrollTop() != it.scrollData.scrollTop) {
@@ -1289,6 +1292,7 @@ define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.
             if (!isDashboard) {
                 $('div#reportViewFrame .body').on('scroll', function() {
                     it.scrollHeader(isDashboard);
+                    console.log('div#reportViewFrame .body: scroll');
                 });
             }
 
@@ -1302,6 +1306,7 @@ define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.
             }
             $(window).on('resize scroll', function() {
                 it.scrollHeader(isDashboard);
+                console.log('window: scroll');
 
                 // reposition jive visual elements
                 it.active && !it.ui.dialog.isVisible && it.showVisualElements(jive.selected.dim);
@@ -1460,7 +1465,7 @@ define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.
 
                 /*******************/
                 /*
-                    Fix for bug #36767: Jive selection area does not shown correct for table columns after sorting;
+                    Fix for bug #36767 - overlay is not shown correctly for table columns after sorting;
                     When zooming, it is necessary to recalculate the overlay width
                  */
                 var headerCols = $('table.jrPage .jrcolHeader[data-coluuid=' + jo.data('coluuid') + ']'),
