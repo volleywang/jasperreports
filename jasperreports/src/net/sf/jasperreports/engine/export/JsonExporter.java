@@ -36,11 +36,15 @@ import net.sf.jasperreports.engine.JRGenericPrintElement;
 import net.sf.jasperreports.engine.JRPrintElement;
 import net.sf.jasperreports.engine.JRPrintFrame;
 import net.sf.jasperreports.engine.JRPrintHyperlink;
+import net.sf.jasperreports.engine.JRPrintHyperlinkParameter;
+import net.sf.jasperreports.engine.JRPrintHyperlinkParameters;
 import net.sf.jasperreports.engine.JRPrintPage;
 import net.sf.jasperreports.engine.JRPropertiesUtil;
 import net.sf.jasperreports.engine.JasperReportsContext;
 import net.sf.jasperreports.engine.PrintBookmark;
 import net.sf.jasperreports.engine.ReportContext;
+import net.sf.jasperreports.engine.util.HyperlinkData;
+import net.sf.jasperreports.engine.util.JRValueStringUtils;
 import net.sf.jasperreports.export.ExporterInputItem;
 import net.sf.jasperreports.export.HtmlReportConfiguration;
 import net.sf.jasperreports.export.JsonExporterConfiguration;
@@ -51,7 +55,9 @@ import net.sf.jasperreports.web.util.JacksonUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 
 /**
@@ -230,7 +236,8 @@ public class JsonExporter extends JRAbstractExporter<JsonReportConfiguration, Js
 		exportElements(elements);
 		exportBookmarks();
 		exportWebFonts();
-		
+		exportHyperlinks();
+
 		JRExportProgressMonitor progressMonitor = getCurrentItemConfiguration().getProgressMonitor();
 		if (progressMonitor != null)
 		{
@@ -308,6 +315,70 @@ public class JsonExporter extends JRAbstractExporter<JsonReportConfiguration, Js
 			writer.write("\"webfonts\": " + JacksonUtil.getInstance(getJasperReportsContext()).getJsonString(webFonts));
 
 			writer.write("}");
+		}
+	}
+
+	protected void exportHyperlinks() throws IOException
+	{
+		ReportContext reportContext = getReportContext();
+		String hyperlinksParameter = "net.sf.jasperreports.html.hyperlinks";
+		if (reportContext != null && reportContext.containsParameter(hyperlinksParameter)) {
+			List<HyperlinkData> hyperlinksData = (List<HyperlinkData>) reportContext.getParameterValue(hyperlinksParameter);
+			if (hyperlinksData != null) {
+				String id = "hyperlinks_" + (hyperlinksData.hashCode() & 0x7FFFFFFF);
+				if (gotFirstJsonFragment)
+				{
+					writer.write(",\n");
+				} else
+				{
+					gotFirstJsonFragment = true;
+				}
+				writer.write("\"" + id + "\": {");
+
+				writer.write("\"id\": \"" + id + "\",");
+				writer.write("\"type\": \"hyperlinks\",");
+				writer.write("\"hyperlinks\": ");
+
+				ObjectMapper mapper = new ObjectMapper();
+				ArrayNode hyperlinkArray = mapper.createArrayNode();
+
+				for (HyperlinkData hd: hyperlinksData) {
+					ObjectNode hyperlinkNode = mapper.createObjectNode();
+					JRPrintHyperlink hyperlink = hd.getHyperlink();
+
+					addProperty(hyperlinkNode,"id", hd.getId());
+//					addProperty(hyperlinkNode, "href", hd.getHref());
+					addProperty(hyperlinkNode, "type", hyperlink.getLinkType());
+					addProperty(hyperlinkNode, "typeValue", hyperlink.getHyperlinkTypeValue().getName());
+					addProperty(hyperlinkNode, "target", hyperlink.getLinkTarget());
+					addProperty(hyperlinkNode, "targetValue", hyperlink.getHyperlinkTargetValue().getName());
+					addProperty(hyperlinkNode, "anchor", hyperlink.getHyperlinkAnchor());
+					addProperty(hyperlinkNode, "page", String.valueOf(hyperlink.getHyperlinkPage()));
+					addProperty(hyperlinkNode, "reference", hyperlink.getHyperlinkReference());
+
+					JRPrintHyperlinkParameters hParams =  hyperlink.getHyperlinkParameters();
+					if (hParams != null && hParams.getParameters().size() > 0) {
+						ObjectNode params = mapper.createObjectNode();
+
+						for (JRPrintHyperlinkParameter hParam: hParams.getParameters()) {
+							params.put(hParam.getName(), JRValueStringUtils.serialize(hParam.getValueClass(), hParam.getValue()));
+						}
+
+						hyperlinkNode.put("params", params);
+					}
+
+					hyperlinkArray.add(hyperlinkNode);
+				}
+
+				writer.write(JacksonUtil.getInstance(getJasperReportsContext()).getJsonString(hyperlinkArray));
+				writer.write("}");
+			}
+		}
+	}
+
+	private void addProperty(ObjectNode objectNode, String property, String value) {
+		if (value != null && !value.equals("null")) {
+			objectNode.put(property, value);
 		}
 	}
 
