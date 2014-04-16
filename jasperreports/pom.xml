@@ -88,9 +88,6 @@
 					<include>**/*.svgz</include>
 					<include>**/*.tmpl</include>
 				</includes>
-                <!--<excludes>-->
-                    <!--<exclude>rebel.xml</exclude>-->
-                <!--</excludes>-->
 			</resource>
 		</resources>
 		<testResources>
