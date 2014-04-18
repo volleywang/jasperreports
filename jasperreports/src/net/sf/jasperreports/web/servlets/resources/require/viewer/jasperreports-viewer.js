@@ -1,4 +1,4 @@
-define(["jasperreports-loader", "jasperreports-report", "jquery.ui-1.10.3", "jasperreports-url-manager"], function(Loader, Report, $, UrlManager) {
+define(["jasperreports-loader", "jasperreports-report", "jquery.ui", "jasperreports-url-manager"], function(Loader, Report, $, UrlManager) {
 	var Viewer = function(o) {
         this.config = {
             at: null,

@@ -1,4 +1,4 @@
-define(["jquery.ui-1.10.3", "jive"], function($, jive) {
+define(["jquery.ui", "jive"], function($, jive) {
     var EventManager = null;
 
     jive.interactive.column = {

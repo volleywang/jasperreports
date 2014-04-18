@@ -1,4 +1,4 @@
-define(["jquery.ui-1.10.3", "text!jive.crosstab.templates.tmpl", "text!jive.crosstab.templates.styles.css", "text!jive.i18n.tmpl"], function($, templates, templateCss, jivei18nText) {
+define(["jquery.ui", "text!jive.crosstab.templates.tmpl", "text!jive.crosstab.templates.styles.css", "text!jive.i18n.tmpl"], function($, templates, templateCss, jivei18nText) {
 	var jivei18n = JSON.parse(jivei18nText),
         i18nfn = function (key) {
 		if (jivei18n.hasOwnProperty(key)) {

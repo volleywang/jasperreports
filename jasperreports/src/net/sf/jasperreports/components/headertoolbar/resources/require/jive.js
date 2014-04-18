@@ -1,4 +1,4 @@
-define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.vm.css', 'text!jive.i18n.tmpl'], function($, templates, css, jivei18nText) {
+define(['jquery.timepicker', 'text!jive.templates.tmpl', 'csslink!jive.vm.css', 'text!jive.i18n.tmpl'], function($, templates, css, jivei18nText) {
     var clickEventName = 'click';
 
     if(/Android|iPhone|iPad/i.test(navigator.userAgent) ) {
