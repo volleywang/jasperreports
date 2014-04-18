@@ -347,11 +347,12 @@ public class JsonExporter extends JRAbstractExporter<JsonReportConfiguration, Js
 					JRPrintHyperlink hyperlink = hd.getHyperlink();
 
 					addProperty(hyperlinkNode,"id", hd.getId());
-//					addProperty(hyperlinkNode, "href", hd.getHref());
+					addProperty(hyperlinkNode, "href", hd.getHref());
+					addProperty(hyperlinkNode, "selector", hd.getSelector());
 					addProperty(hyperlinkNode, "type", hyperlink.getLinkType());
 					addProperty(hyperlinkNode, "typeValue", hyperlink.getHyperlinkTypeValue().getName());
 					addProperty(hyperlinkNode, "target", hyperlink.getLinkTarget());
-					addProperty(hyperlinkNode, "targetValue", hyperlink.getHyperlinkTargetValue().getName());
+					addProperty(hyperlinkNode, "targetValue", hyperlink.getHyperlinkTargetValue().getHtmlValue());
 					addProperty(hyperlinkNode, "anchor", hyperlink.getHyperlinkAnchor());
 					addProperty(hyperlinkNode, "page", String.valueOf(hyperlink.getHyperlinkPage()));
 					addProperty(hyperlinkNode, "reference", hyperlink.getHyperlinkReference());
@@ -361,7 +362,17 @@ public class JsonExporter extends JRAbstractExporter<JsonReportConfiguration, Js
 						ObjectNode params = mapper.createObjectNode();
 
 						for (JRPrintHyperlinkParameter hParam: hParams.getParameters()) {
-							params.put(hParam.getName(), JRValueStringUtils.serialize(hParam.getValueClass(), hParam.getValue()));
+							if (Collection.class.isAssignableFrom(hParam.getValue().getClass())) {
+								ArrayNode paramValues = mapper.createArrayNode();
+								Collection col = (Collection) hParam.getValue();
+								for (Iterator it = col.iterator(); it.hasNext();) {
+									Object next = it.next();
+									paramValues.add(JRValueStringUtils.serialize(next.getClass().getName(), next));
+								}
+								params.put(hParam.getName(), paramValues);
+							} else {
+								params.put(hParam.getName(), JRValueStringUtils.serialize(hParam.getValueClass(), hParam.getValue()));
+							}
 						}
 
 						hyperlinkNode.put("params", params);

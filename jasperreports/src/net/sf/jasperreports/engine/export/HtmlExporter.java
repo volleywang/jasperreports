@@ -1269,11 +1269,12 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			if (hyperlink.getLinkType() != null)
 			{
 				int id = hyperlink.hashCode() & 0x7FFFFFFF;
-				writer.write(" class=\"_jrHyperLink\" data-id=\"" + id + "\"");
+				writer.write(" class=\"_jrHyperLink " + hyperlink.getLinkType() + "\" data-id=\"" + id + "\"");
 
 				HyperlinkData hyperlinkData = new HyperlinkData();
 				hyperlinkData.setId(String.valueOf(id));
 				hyperlinkData.setHref(getHyperlinkURL(hyperlink));
+				hyperlinkData.setSelector("._jrHyperLink." + hyperlink.getLinkType());
 				hyperlinkData.setHyperlink(hyperlink);
 
 				hyperlinksData.add(hyperlinkData);
@@ -1881,11 +1882,12 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 				canWrite = true;
 				int id = link.hashCode() & 0x7FFFFFFF;
 
-				writer.write("<span class=\"_jrHyperLink\" data-id=\"" + id + "\"");
+				writer.write("<span class=\"_jrHyperLink " + link.getLinkType() + "\" data-id=\"" + id + "\"");
 
 				HyperlinkData hyperlinkData = new HyperlinkData();
 				hyperlinkData.setId(String.valueOf(id));
 				hyperlinkData.setHref(getHyperlinkURL(link));
+				hyperlinkData.setSelector("._jrHyperLink." + link.getLinkType());
 				hyperlinkData.setHyperlink(link);
 
 				hyperlinksData.add(hyperlinkData);

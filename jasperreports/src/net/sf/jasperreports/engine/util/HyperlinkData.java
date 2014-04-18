@@ -34,6 +34,7 @@ public class HyperlinkData {
 
 	private String id;
 	private String href;
+	private String selector;
 	private JRPrintHyperlink hyperlink;
 
 
@@ -51,6 +52,14 @@ public class HyperlinkData {
 
 	public void setHref(String href) {
 		this.href = href;
+	}
+
+	public String getSelector() {
+		return selector;
+	}
+
+	public void setSelector(String selector) {
+		this.selector = selector;
 	}
 
 	public JRPrintHyperlink getHyperlink() {
