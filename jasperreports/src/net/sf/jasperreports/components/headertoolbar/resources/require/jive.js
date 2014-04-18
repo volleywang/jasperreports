@@ -1179,8 +1179,6 @@ define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.
                 scrolledTop = false,
                 scrolledLeft = false;
 
-            console.log('div#reportViewFrame .body: width: ' + scrollContainer.width());
-
             // Determine scroll direction and value
             if (it.scrollData.scrollTop != null) { // check previous scrollTop
                 if (scrollContainer.scrollTop() != it.scrollData.scrollTop) {
@@ -1292,7 +1290,6 @@ define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.
             if (!isDashboard) {
                 $('div#reportViewFrame .body').on('scroll', function() {
                     it.scrollHeader(isDashboard);
-                    console.log('div#reportViewFrame .body: scroll');
                 });
             }
 
@@ -1306,7 +1303,6 @@ define(['jqueryui-1.10.3-timepicker', 'text!jive.templates.tmpl', 'csslink!jive.
             }
             $(window).on('resize scroll', function() {
                 it.scrollHeader(isDashboard);
-                console.log('window: scroll');
 
                 // reposition jive visual elements
                 it.active && !it.ui.dialog.isVisible && it.showVisualElements(jive.selected.dim);
