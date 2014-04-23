@@ -362,16 +362,18 @@ public class JsonExporter extends JRAbstractExporter<JsonReportConfiguration, Js
 						ObjectNode params = mapper.createObjectNode();
 
 						for (JRPrintHyperlinkParameter hParam: hParams.getParameters()) {
-							if (Collection.class.isAssignableFrom(hParam.getValue().getClass())) {
-								ArrayNode paramValues = mapper.createArrayNode();
-								Collection col = (Collection) hParam.getValue();
-								for (Iterator it = col.iterator(); it.hasNext();) {
-									Object next = it.next();
-									paramValues.add(JRValueStringUtils.serialize(next.getClass().getName(), next));
+							if (hParam.getValue() != null) {
+								if (Collection.class.isAssignableFrom(hParam.getValue().getClass())) {
+									ArrayNode paramValues = mapper.createArrayNode();
+									Collection col = (Collection) hParam.getValue();
+									for (Iterator it = col.iterator(); it.hasNext();) {
+										Object next = it.next();
+										paramValues.add(JRValueStringUtils.serialize(next.getClass().getName(), next));
+									}
+									params.put(hParam.getName(), paramValues);
+								} else {
+									params.put(hParam.getName(), JRValueStringUtils.serialize(hParam.getValueClass(), hParam.getValue()));
 								}
-								params.put(hParam.getName(), paramValues);
-							} else {
-								params.put(hParam.getName(), JRValueStringUtils.serialize(hParam.getValueClass(), hParam.getValue()));
 							}
 						}
 
