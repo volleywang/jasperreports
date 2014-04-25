@@ -201,7 +201,7 @@ define(["jasperreports-loader", "jasperreports-status-checker",
          */
         _notify: function(evt) {
             this.config.debug && console.log("report notified of event: " + evt.name + "; type: " + evt.type);
-            this.eventManager.triggerEvent(evt.name, evt.data);
+            this.eventManager.triggerEvent(evt.name, evt);
         }
 	};
 	
