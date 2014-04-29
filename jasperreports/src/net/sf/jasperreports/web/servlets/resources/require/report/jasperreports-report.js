@@ -4,10 +4,11 @@ define(["jasperreports-loader", "jasperreports-status-checker",
 	var Report = function(o) {
 
 		this.config = {
-				reporturi: null,
-				async: true,
-				page: 0,
-                updateInterval: 1000
+            reporturi: null,
+            async: true,
+            page: 0,
+            updateInterval: 1000,
+            container: null
 		};
 		$.extend(this.config, o);
 
