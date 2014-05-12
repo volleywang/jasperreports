@@ -243,6 +243,7 @@ public class JacksonUtil
 		addProperty(hyperlinkNode, "typeValue", hyperlink.getHyperlinkTypeValue().getName());
 		addProperty(hyperlinkNode, "target", hyperlink.getLinkTarget());
 		addProperty(hyperlinkNode, "targetValue", hyperlink.getHyperlinkTargetValue().getHtmlValue());
+		addProperty(hyperlinkNode, "tooltip", hyperlink.getHyperlinkTooltip());
 		addProperty(hyperlinkNode, "anchor", hyperlink.getHyperlinkAnchor());
 		addProperty(hyperlinkNode, "page", String.valueOf(hyperlink.getHyperlinkPage()));
 		addProperty(hyperlinkNode, "reference", hyperlink.getHyperlinkReference());
