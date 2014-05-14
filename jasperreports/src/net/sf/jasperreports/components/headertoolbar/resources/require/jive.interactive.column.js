@@ -241,6 +241,9 @@ define(["jquery.ui", "jive"], function($, jive) {
 
             return headerJo;
         },
+        zoom: function(o) {
+            jive.zoom(o);
+        },
         getElementSize: function(){
             var jo = jive.selected.jo,
                 cid = jo.data('cellid'),

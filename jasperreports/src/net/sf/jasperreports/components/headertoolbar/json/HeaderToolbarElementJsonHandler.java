@@ -273,7 +273,9 @@ public class HeaderToolbarElementJsonHandler implements GenericElementJsonHandle
 			}
 
 			contextMap.put("columnUuid", columnUuid);
-			contextMap.put("columnLabel", columnLabel);
+			//FIXME conceptually it would be better not to encode for html here 
+			//but produce a pure json and encode for html on the client where necessary
+			contextMap.put("columnLabel", JRStringUtil.htmlEncode(columnLabel));
 			contextMap.put("columnIndex", columnIndex);
 			contextMap.put("dataType", FilterTypesEnum.TEXT.getName()); // use Text as default
 			contextMap.put("canSort", canSort);
@@ -295,7 +297,7 @@ public class HeaderToolbarElementJsonHandler implements GenericElementJsonHandle
 			}
 			contextMap.put("columnName", columnComponentName);
 
-			if (canFilter) 
+			if (canFilter)
 			{
 				FilterData filterData = getFilterData(jrContext, reportContext, dataset, tableUUID, columnName, columnType, filterType);
 

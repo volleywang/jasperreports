@@ -262,7 +262,7 @@ public class TableReport implements JRReport
 			}
 			columnInteractivityMapping.put((Column)column, new Pair<Boolean, String>(interactiveColumn, columnName));
 		}
-		
+
 		if (interactiveColumnCount > 0) {
 			this.isInteractiveTable = true;
 		}

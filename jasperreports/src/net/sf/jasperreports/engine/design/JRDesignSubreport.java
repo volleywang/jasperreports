@@ -40,6 +40,7 @@ import net.sf.jasperreports.engine.JRSubreportReturnValue;
 import net.sf.jasperreports.engine.JRVisitor;
 import net.sf.jasperreports.engine.base.JRBaseSubreport;
 import net.sf.jasperreports.engine.type.ModeEnum;
+import net.sf.jasperreports.engine.type.OverflowType;
 import net.sf.jasperreports.engine.util.JRCloneUtils;
 import net.sf.jasperreports.engine.util.JRStyleResolver;
 
@@ -75,6 +76,7 @@ public class JRDesignSubreport extends JRDesignElement implements JRSubreport
 	protected Boolean isUsingCache;
 
 	private Boolean runToBottom;
+	private OverflowType overflowType;
 
 	/**
 	 *
@@ -372,6 +374,20 @@ public class JRDesignSubreport extends JRDesignElement implements JRSubreport
 		getEventSupport().firePropertyChange(JRBaseSubreport.PROPERTY_RUN_TO_BOTTOM, old, this.runToBottom);
 	}
 
+	@Override
+	public OverflowType getOverflowType()
+	{
+		return overflowType;
+	}
+
+	@Override
+	public void setOverflowType(OverflowType overflowType)
+	{
+		Object old = this.overflowType;
+		this.overflowType = overflowType;
+		getEventSupport().firePropertyChange(JRBaseSubreport.PROPERTY_OVERFLOW_TYPE, old, this.overflowType);
+	}
+
 	
 	/**
 	 * 
@@ -385,7 +401,8 @@ public class JRDesignSubreport extends JRDesignElement implements JRSubreport
 			clone.parametersMap = new LinkedHashMap<String, JRSubreportParameter>();
 			for(Iterator<String> it = parametersMap.keySet().iterator(); it.hasNext();)
 			{
-				clone.parametersMap.put(key, JRCloneUtils.nullSafeClone(parametersMap.get(it.next())));
+				String name = it.next();
+				clone.parametersMap.put(name, JRCloneUtils.nullSafeClone(parametersMap.get(name)));
 			}
 		}
 

@@ -25,6 +25,11 @@
 			<id>jasperreports</id>
 			<url>http://jasperreports.sourceforge.net/maven2</url>
 		</repository>
+		<repository>
+			<id>jr-ce-snapshots</id>
+			<name>JasperReports CE Snapshots</name>
+			<url>http://jaspersoft.artifactoryonline.com/jaspersoft/jr-ce-snapshots</url>
+		</repository>
 	</repositories>
 	<build>
 		<sourceDirectory>src</sourceDirectory>

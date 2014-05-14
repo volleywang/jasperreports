@@ -21,36 +21,31 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with JasperReports. If not, see <http://www.gnu.org/licenses/>.
  */
-package net.sf.jasperreports.engine;
+package net.sf.jasperreports.engine.type;
 
+import net.sf.jasperreports.engine.JRConstants;
 
 /**
- * An abstract representation of a report static text. It provides functionality for static texts.
- * <p/>
- * Static texts are text elements with fixed content, which does not change during the
- * report-filling process. They are used mostly to introduce static text labels into the
- * generated documents.
- * <p/>
- * Besides the general element properties and the common text-specific properties, a static text 
- * definition has only the <code>&lt;text&gt;</code> tag, which introduces the fixed text content 
- * of the static text element. The text content can be collected using the {@link #getText()} method.
- * 
- * @author Teodor Danciu (teodord@users.sourceforge.net)
+ * @author Lucian Chirita (lucianc@users.sourceforge.net)
  * @version $Id$
  */
-public interface JRStaticText extends JRTextElement
+public enum OverflowType implements NamedEnum
 {
+	STRETCH("Stretch"),
+	NO_STRETCH("NoStretch");
+	
+	private static final long serialVersionUID = JRConstants.SERIAL_VERSION_UID;
+	
+	private final String name;
+	
+	private OverflowType(String name)
+	{
+		this.name = name;
+	}
 
-
-	/**
-	 *
-	 */
-	public String getText();
-
-	/**
-	 *
-	 */
-	public void setText(String text);
-
-
+	@Override
+	public String getName()
+	{
+		return name;
+	}
 }

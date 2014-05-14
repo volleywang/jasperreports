@@ -25,6 +25,11 @@
 			<id>jasperreports</id>
 			<url>http://jasperreports.sourceforge.net/maven2</url>
 		</repository>
+		<repository>
+			<id>jr-ce-snapshots</id>
+			<name>JasperReports CE Snapshots</name>
+			<url>http://jaspersoft.artifactoryonline.com/jaspersoft/jr-ce-snapshots</url>
+		</repository>
 	</repositories>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
@@ -77,8 +82,13 @@
 		</plugins>
 	</build>
 	<distributionManagement>
+		<repository>
+			<id>jr-ce-releases</id>
+			<name>JasperReports CE Releases</name>
+			<url>http://jaspersoft.artifactoryonline.com/jaspersoft/jr-ce-releases</url>
+		</repository>
 		<snapshotRepository>
-			<id>jr-snapshots</id>
+			<id>jr-ce-snapshots</id>
 			<name>JasperReports CE Snapshots</name>
 			<url>http://jaspersoft.artifactoryonline.com/jaspersoft/jr-ce-snapshots</url>
 		</snapshotRepository>
