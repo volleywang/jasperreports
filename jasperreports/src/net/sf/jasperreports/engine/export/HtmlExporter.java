@@ -49,6 +49,7 @@ import net.sf.jasperreports.engine.DefaultJasperReportsContext;
 import net.sf.jasperreports.engine.ImageMapRenderable;
 import net.sf.jasperreports.engine.JRAnchor;
 import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRFont;
 import net.sf.jasperreports.engine.JRGenericElementType;
 import net.sf.jasperreports.engine.JRGenericPrintElement;
 import net.sf.jasperreports.engine.JRImageRenderer;
@@ -70,6 +71,7 @@ import net.sf.jasperreports.engine.JRPrintRectangle;
 import net.sf.jasperreports.engine.JRPrintText;
 import net.sf.jasperreports.engine.JRPropertiesUtil;
 import net.sf.jasperreports.engine.JRRuntimeException;
+import net.sf.jasperreports.engine.JRStyle;
 import net.sf.jasperreports.engine.JRWrappingSvgRenderer;
 import net.sf.jasperreports.engine.JasperReportsContext;
 import net.sf.jasperreports.engine.PrintElementId;
@@ -77,6 +79,7 @@ import net.sf.jasperreports.engine.PrintElementVisitor;
 import net.sf.jasperreports.engine.Renderable;
 import net.sf.jasperreports.engine.RenderableUtil;
 import net.sf.jasperreports.engine.ReportContext;
+import net.sf.jasperreports.engine.base.JRBaseStyle;
 import net.sf.jasperreports.engine.export.tabulator.Cell;
 import net.sf.jasperreports.engine.export.tabulator.CellVisitor;
 import net.sf.jasperreports.engine.export.tabulator.Column;
@@ -132,13 +135,13 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, HtmlExporterConfiguration>
 {
 	private static final Log log = LogFactory.getLog(HtmlExporter.class);
-	
+
 	/**
 	 * The exporter key, as used in
 	 * {@link GenericElementHandlerEnviroment#getElementHandler(JRGenericElementType, String)}.
 	 */
 	public static final String HTML_EXPORTER_KEY = JRPropertiesUtil.PROPERTY_PREFIX + "html";
-	
+
 	/**
 	 *
 	 */
@@ -150,9 +153,9 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 	public static final String PROPERTY_IGNORE_HYPERLINK = HtmlReportConfiguration.PROPERTY_IGNORE_HYPERLINK;
 
 	/**
-	 * Property that provides the value for the <code>class</code> CSS style property to be applied 
-	 * to elements in the table generated for the report. The value of this property 
-	 * will be used as the value for the <code>class</code> attribute of the <code>&lt;td&gt;</code> tag for the element when exported to HTML and/or 
+	 * Property that provides the value for the <code>class</code> CSS style property to be applied
+	 * to elements in the table generated for the report. The value of this property
+	 * will be used as the value for the <code>class</code> attribute of the <code>&lt;td&gt;</code> tag for the element when exported to HTML and/or
 	 * the <code>class</code> attribute of the <code>&lt;span&gt;</code> or <code>&lt;div&gt;</code> tag for the element, when exported to XHTML/CSS.
 	 */
 	public static final String PROPERTY_HTML_CLASS = HTML_EXPORTER_PROPERTIES_PREFIX + "class";
@@ -167,25 +170,33 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 	 */
 	public static final String PROPERTY_BORDER_COLLAPSE = HtmlReportConfiguration.PROPERTY_BORDER_COLLAPSE;
 
-	protected JRHyperlinkTargetProducerFactory targetProducerFactory;		
-	
+	public static final String CSS_DEFAULT_STYLE_NAME = "jrDflt";
+
+	public static final String CSS_TEXT_SUFFIX = "_txt";
+	public static final String CSS_GRAPHIC_SUFFIX = "_grphc";
+	public static final String CSS_IMAGE_SUFFIX = "_img";
+
+	protected JRHyperlinkTargetProducerFactory targetProducerFactory;
+
 	protected Map<String,String> rendererToImagePathMap;
 	protected Map<Pair<String, Rectangle>,String> imageMaps;
 
 	protected Map<String, HtmlFont> fontsToProcess;
-	
+
 	protected Writer writer;
 	protected int reportIndex;
 	protected int pageIndex;
-	
+
 	protected LinkedList<Color> backcolorStack = new LinkedList<Color>();
-	
+
 	protected ExporterFilter tableFilter;
-	
+
 	protected int pointerEventsNoneStack = 0;
 
 	private List<HyperlinkData> hyperlinksData = new ArrayList<HyperlinkData>();
-	
+
+	private JRStyle jrDefaultStyle;
+
 	public HtmlExporter()
 	{
 		this(DefaultJasperReportsContext.getInstance());
@@ -323,6 +334,17 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		String htmlFooter = configuration.getHtmlFooter();
 		boolean flushOutput = configuration.isFlushOutput();//FIXMEEXPORT maybe move flush flag to output
 
+		List<ExporterInputItem> items = exporterInput.getItems();
+		StringBuilder reportStyles = new StringBuilder();
+
+		// get CSS
+		for(reportIndex = 0; reportIndex < items.size(); reportIndex++)
+		{
+			ExporterInputItem item = items.get(reportIndex);
+			setCurrentExporterInputItem(item);
+			addReportStyles(reportStyles);
+		}
+
 		if (htmlHeader == null)
 		{
 			String encoding = getExporterOutput().getEncoding();
@@ -334,6 +356,11 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			writer.write("  <meta http-equiv=\"Content-Type\" content=\"text/html; charset=" + encoding + "\"/>\n");
 			writer.write("  <style type=\"text/css\">\n");
 			writer.write("    a {text-decoration: none}\n");
+
+			if (reportStyles.length() > 0) {
+				writer.write(reportStyles.toString());
+			}
+
 			writer.write("  </style>\n");
 			writer.write("</head>\n");
 			writer.write("<body text=\"#000000\" link=\"#000000\" alink=\"#000000\" vlink=\"#000000\">\n");
@@ -343,17 +370,16 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		}
 		else
 		{
+			// FIXME: define styles placeholder and replace it with reportStyles
 			writer.write(htmlHeader);
 		}
 
-		List<ExporterInputItem> items = exporterInput.getItems();
-		
 		for(reportIndex = 0; reportIndex < items.size(); reportIndex++)
 		{
 			ExporterInputItem item = items.get(reportIndex);
 
 			setCurrentExporterInputItem(item);
-			
+
 			List<JRPrintPage> pages = jasperPrint.getPages();
 			if (pages != null && pages.size() > 0)
 			{
@@ -592,14 +618,19 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		writer.write("</table>\n");
 	}
 
-	protected void writeText(JRPrintText text, TableCell cell)
+	protected void writeOwnText(JRPrintText text, TableCell cell)
 			throws IOException
 	{
 		JRStyledText styledText = getStyledText(text);
 		int textLength = styledText == null ? 0 : styledText.length();
-		
+
+		JRStyle textStyle = text.getStyle();
+		if (textStyle == null) {
+			textStyle = getDefaultStyle();
+		}
+
 		startCell(text, cell);
-		
+
 		if (text.getRunDirectionValue() == RunDirectionEnum.RTL)
 		{
 			writer.write(" dir=\"rtl\"");
@@ -607,110 +638,59 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 
 		StringBuilder styleBuffer = new StringBuilder();
 
-		String verticalAlignment = HTML_VERTICAL_ALIGN_TOP;
-
-		switch (text.getVerticalAlignmentValue())
-		{
-			case BOTTOM :
-			{
-				verticalAlignment = HTML_VERTICAL_ALIGN_BOTTOM;
-				break;
-			}
-			case MIDDLE :
-			{
-				verticalAlignment = HTML_VERTICAL_ALIGN_MIDDLE;
-				break;
-			}
-			case TOP :
-			default :
-			{
-				verticalAlignment = HTML_VERTICAL_ALIGN_TOP;
-			}
-		}
-
 		appendElementCellGenericStyle(cell, styleBuffer);
-		appendBackcolorStyle(cell, styleBuffer);
-		appendBorderStyle(cell.getBox(), styleBuffer);
-		appendPaddingStyle(text.getLineBox(), styleBuffer);
-
-		String horizontalAlignment = CSS_TEXT_ALIGN_LEFT;
-		if (textLength > 0)
-		{
-			switch (text.getHorizontalAlignmentValue())
-			{
-				case RIGHT :
-				{
-					horizontalAlignment = CSS_TEXT_ALIGN_RIGHT;
-					break;
-				}
-				case CENTER :
-				{
-					horizontalAlignment = CSS_TEXT_ALIGN_CENTER;
-					break;
-				}
-				case JUSTIFIED :
-				{
-					horizontalAlignment = CSS_TEXT_ALIGN_JUSTIFY;
-					break;
-				}
-				case LEFT :
-				default :
-				{
-					horizontalAlignment = CSS_TEXT_ALIGN_LEFT;
-				}
-			}
-		}
+		appendOwnBackcolorStyle(cell, styleBuffer, textStyle);
+		appendOwnBorderStyle(cell.getBox(), styleBuffer, textStyle);
+		appendOwnPaddingStyle(text.getLineBox(), styleBuffer, textStyle);
 
 		if (getCurrentItemConfiguration().isWrapBreakWord())
 		{
 			styleBuffer.append("width: " + toSizeUnit(text.getWidth()) + "; ");
 			styleBuffer.append("word-wrap: break-word; ");
 		}
-		
+
 		if (text.getLineBreakOffsets() != null)
 		{
 			//if we have line breaks saved in the text, set nowrap so that
 			//the text only wraps at the explicit positions
 			styleBuffer.append("white-space: nowrap; ");
 		}
-		
-		styleBuffer.append("text-indent: " + text.getParagraph().getFirstLineIndent().intValue() + "px; ");
+
+		if (text.getParagraph().getOwnFirstLineIndent() != null ) {
+			styleBuffer.append("text-indent: " + text.getParagraph().getOwnFirstLineIndent().intValue() + "px; ");
+		}
 
 		String rotationValue = null;
 		StringBuilder spanStyleBuffer = new StringBuilder();
 		StringBuilder divStyleBuffer = new StringBuilder();
+
 		if (text.getRotationValue() == RotationEnum.NONE)
 		{
-			if (!verticalAlignment.equals(HTML_VERTICAL_ALIGN_TOP))
+			VerticalAlignEnum ownValign = text.getOwnVerticalAlignmentValue();
+			VerticalAlignEnum styleValign = textStyle.getVerticalAlignmentValue();
+			if (ownValign != null && ownValign != VerticalAlignEnum.TOP && (styleValign == null || (styleValign != null && ownValign != styleValign)))
 			{
 				styleBuffer.append(" vertical-align: ");
-				styleBuffer.append(verticalAlignment);
+				styleBuffer.append(ownValign.getName().toLowerCase());
 				styleBuffer.append(";");
 			}
-
-			//writing text align every time even when it's left
-			//because IE8 with transitional defaults to center 
-			styleBuffer.append("text-align: ");
-			styleBuffer.append(horizontalAlignment);
-			styleBuffer.append(";");
 		}
 		else
 		{
-			rotationValue = setRotationStyles(text, horizontalAlignment, 
-					spanStyleBuffer, divStyleBuffer);
+			rotationValue = setRotationStyles(text, spanStyleBuffer, divStyleBuffer);
 		}
-		
+
 		writeStyle(styleBuffer);
-		
+
 		finishStartCell();
-		
+
 		if (text.getAnchorName() != null)
 		{
 			writer.write("<a name=\"");
 			writer.write(text.getAnchorName());
 			writer.write("\"/>");
 		}
-		
+
 		if (text.getBookmarkLevel() != JRAnchor.NO_BOOKMARK)
 		{
 			writer.write("<a name=\"");
@@ -723,22 +703,18 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			writer.write("<div style=\"position: relative; overflow: hidden; ");
 			writer.write(divStyleBuffer.toString());
 			writer.write("\">\n");
-			writer.write("<span class=\"rotated\" data-rotation=\"");
-			writer.write(rotationValue);
-			writer.write("\" style=\"position: absolute; display: table; ");
+			writer.write("<span style=\"position: absolute; display: table; ");
 			writer.write(spanStyleBuffer.toString());
 			writer.write("\">");
 			writer.write("<span style=\"display: table-cell; vertical-align:"); //display:table-cell conflicts with overflow: hidden;
-			writer.write(verticalAlignment);
+			writer.write(text.getVerticalAlignmentValue().getName().toLowerCase());
 			writer.write(";\">");
 		}
-		
+
 		boolean hyperlinkStarted = startHyperlink(text);
 
 		if (textLength > 0)
 		{
-			//only use text tooltip when no hyperlink present
-//			String textTooltip = hyperlinkStarted ? null : text.getHyperlinkTooltip();
 			exportStyledText(text, styledText, text.getHyperlinkTooltip(), hyperlinkStarted);
 		}
 
@@ -746,7 +722,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		{
 			endHyperlink();
 		}
-		
+
 		if (rotationValue != null)
 		{
 			writer.write("</span></span></div>");
@@ -755,22 +731,21 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		endCell();
 	}
 
-	protected String setRotationStyles(JRPrintText text, String horizontalAlignment, 
-			StringBuilder spanStyleBuffer, StringBuilder divStyleBuffer)
+	protected String setRotationStyles(JRPrintText text, StringBuilder spanStyleBuffer, StringBuilder divStyleBuffer)
 	{
 		String rotationValue;
 		int textWidth = text.getWidth() - text.getLineBox().getLeftPadding() - text.getLineBox().getRightPadding();
 		int textHeight = text.getHeight() - text.getLineBox().getTopPadding() - text.getLineBox().getBottomPadding();
 		int rotatedWidth;
 		int rotatedHeight;
-		
+
 		int rotationIE;
 		int rotationAngle;
 		int translateX;
 		int translateY;
 		switch (text.getRotationValue())
 		{
-			case LEFT : 
+			case LEFT :
 			{
 				translateX = - (textHeight - textWidth) / 2;
 				translateY = (textHeight - textWidth) / 2;
@@ -781,7 +756,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 				rotationValue = "left";
 				break;
 			}
-			case RIGHT : 
+			case RIGHT :
 			{
 				translateX = - (textHeight - textWidth) / 2;
 				translateY = (textHeight - textWidth) / 2;
@@ -792,7 +767,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 				rotationValue = "right";
 				break;
 			}
-			case UPSIDE_DOWN : 
+			case UPSIDE_DOWN :
 			{
 				translateX = 0;
 				translateY = 0;
@@ -814,9 +789,9 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		appendSizeStyle(rotatedWidth, rotatedHeight, spanStyleBuffer);
 
 		spanStyleBuffer.append("text-align: ");
-		spanStyleBuffer.append(horizontalAlignment);
+		spanStyleBuffer.append(text.getHorizontalAlignmentValue().getName().toLowerCase());
 		spanStyleBuffer.append(";");
-		
+
 		spanStyleBuffer.append("-webkit-transform: translate(" + translateX + "px," + translateY + "px) ");
 		spanStyleBuffer.append("rotate(" + rotationAngle + "deg); ");
 		spanStyleBuffer.append("-moz-transform: translate(" + translateX + "px," + translateY + "px) ");
@@ -840,7 +815,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		styleBuffer.append(";");
 	}
 
-	protected void writeImage(JRPrintImage image, TableCell cell)
+	protected void writeOwnImage(JRPrintImage image, TableCell cell)
 			throws IOException, JRException
 	{
 		startCell(image, cell);
@@ -874,20 +849,22 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			styleBuffer.append("; ");
 		}
 
-		appendElementCellGenericStyle(cell, styleBuffer);
-		appendBackcolorStyle(cell, styleBuffer);
-		
-		boolean addedToStyle = appendBorderStyle(cell.getBox(), styleBuffer);
-		if (!addedToStyle)
+		JRStyle imageStyle = image.getStyle();
+		if (imageStyle == null)
 		{
-			appendPen(
-				styleBuffer,
-				image.getLinePen(),
-				null
-				);
+			imageStyle = getDefaultStyle();
 		}
 
-		appendPaddingStyle(image.getLineBox(), styleBuffer);
+		appendElementCellGenericStyle(cell, styleBuffer);
+		appendOwnBackcolorStyle(cell, styleBuffer, imageStyle);
+		
+		boolean addedToStyle = appendOwnBorderStyle(cell.getBox(), styleBuffer, imageStyle);
+		if (!addedToStyle)
+		{
+			appendGraphicElementBorder(image, imageStyle, styleBuffer, null);
+		}
+
+		appendOwnPaddingStyle(image.getLineBox(), styleBuffer, imageStyle);
 
 		writeStyle(styleBuffer);
 
@@ -1309,70 +1286,127 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		}
 	}
 
-	protected void writeRectangle(JRPrintGraphicElement element, TableCell cell) throws IOException
+	protected void writeOwnRectangle(JRPrintGraphicElement element, TableCell cell) throws IOException
 	{
 		startCell(element, cell);
 
+		JRStyle elementStyle = element.getStyle();
+		if (elementStyle == null)
+		{
+			elementStyle = getDefaultStyle();
+		}
+
 		StringBuilder styleBuffer = new StringBuilder();
+
 		appendElementCellGenericStyle(cell, styleBuffer);
-		appendBackcolorStyle(cell, styleBuffer);
-		appendPen(
-			styleBuffer,
-			element.getLinePen(),
-			null
-			);
+		appendOwnBackcolorStyle(cell, styleBuffer, elementStyle);
+		appendGraphicElementBorder(element, elementStyle, styleBuffer, null);
+
 		writeStyle(styleBuffer);
-
 		finishStartCell();
-
 		endCell();
 	}
 
-	protected void writeLine(JRPrintLine line, TableCell cell)
+	protected void appendGraphicElementBorder(JRPrintGraphicElement element, JRStyle elementStyle, StringBuilder sb, String side)
+	{
+		float borderWidth = -1f;
+		LineStyleEnum lineStyle = null;
+		Color lineColor = null;
+		JRPen stylePen = elementStyle.getLinePen();
+
+		if (stylePen != null)
+		{
+			if (element.getLinePen().getOwnLineWidth() != null
+					&& !element.getLinePen().getOwnLineWidth().equals(stylePen.getLineWidth()))
+			{
+				borderWidth = element.getLinePen().getOwnLineWidth();
+			}
+			if (element.getLinePen().getOwnLineStyleValue() != null
+					&& !element.getLinePen().getOwnLineStyleValue().equals(stylePen.getLineStyleValue()))
+			{
+				lineStyle = element.getLinePen().getOwnLineStyleValue();
+			}
+			if (element.getLinePen().getOwnLineColor() != null
+					&& !element.getLinePen().getOwnLineColor().equals(stylePen.getLineColor()))
+			{
+				lineColor = element.getLinePen().getOwnLineColor();
+			}
+		}
+		else
+		{
+			borderWidth = element.getLinePen().getLineWidth();
+			lineStyle = element.getLinePen().getLineStyleValue();
+			lineColor = element.getLinePen().getLineColor();
+		}
+
+		if (0f < borderWidth && borderWidth < 1f)
+		{
+			borderWidth = 1f;
+		}
+
+		appendOwnPen(
+			sb,
+			borderWidth,
+			lineStyle,
+			lineColor,
+			side
+		);
+	}
+
+	protected void writeOwnLine(JRPrintLine line, TableCell cell)
 			throws IOException
 	{
 		startCell(line, cell);
 
 		StringBuilder styleBuffer = new StringBuilder();
 
+		JRStyle lineStyle = line.getStyle();
+		if (lineStyle == null) {
+			lineStyle = getDefaultStyle();
+		}
+
 		appendElementCellGenericStyle(cell, styleBuffer);
-		appendBackcolorStyle(cell, styleBuffer);
-		
-		String side = null;
+		appendOwnBackcolorStyle(cell, styleBuffer, lineStyle);
+
+		String[] sides = new String[] {"top", "bottom", "left", "right"};
+		int sideIndex;
 		float ratio = line.getWidth() / line.getHeight();
 		if (ratio > 1)
 		{
 			if (line.getDirectionValue() == LineDirectionEnum.TOP_DOWN)
 			{
-				side = "top";
+				sideIndex = 0;
 			}
 			else
 			{
-				side = "bottom";
+				sideIndex = 1;
 			}
 		}
 		else
 		{
 			if (line.getDirectionValue() == LineDirectionEnum.TOP_DOWN)
 			{
-				side = "left";
+				sideIndex = 2;
 			}
 			else
 			{
-				side = "right";
+				sideIndex = 3;
 			}
 		}
 
-		appendPen(
-			styleBuffer,
-			line.getLinePen(),
-			side
-			);
+		appendGraphicElementBorder(line, lineStyle, styleBuffer, sides[sideIndex]);
+
+		// clear the border width for the other sides
+		for (int i = 0; i < 4; i++)
+		{
+			if (i != sideIndex)
+			{
+				styleBuffer.append("border-").append(sides[i]).append("-width: 0; ");
+			}
+		}
 
 		writeStyle(styleBuffer);
-
 		finishStartCell();
-
 		endCell();
 	}
 	
@@ -1482,50 +1516,84 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 	public String getDataAttributes(JRPrintElement element, TableCell cell)
 	{
 		StringBuffer sbuffer = new StringBuffer();
-		
+		StringBuffer cssClassBuffer = new StringBuffer();
+
 		String id = getCellProperty(element, cell, PROPERTY_HTML_ID);
 		if (id != null)
 		{
 			sbuffer.append(" id=\"" + id +"\"");
 		}
+
+		// Add CSS class based on element type
+		JRStyle elementStyle = element.getStyle();
+		if (elementStyle == null)
+		{
+			elementStyle = getDefaultStyle();
+		}
+		if (element instanceof JRPrintText)
+		{
+			cssClassBuffer.append(elementStyle.getName()).append(CSS_TEXT_SUFFIX);
+		}
+		else if (element instanceof  JRPrintGraphicElement)
+		{
+			if (element instanceof JRPrintImage)
+			{
+				cssClassBuffer.append(elementStyle.getName()).append(CSS_IMAGE_SUFFIX);
+			}
+			else
+			{
+				cssClassBuffer.append(elementStyle.getName()).append(CSS_GRAPHIC_SUFFIX);
+			}
+		}
+
 		String clazz = getCellProperty(element, cell, PROPERTY_HTML_CLASS);
 		if (clazz != null)
 		{
-			sbuffer.append(" class=\"" + clazz +"\"");
+			cssClassBuffer.append(" ").append(clazz);
 		}
-		String colUuid = getCellProperty(element, cell, HeaderToolbarElement.PROPERTY_COLUMN_UUID);//FIXMEJIVE register properties like this in a pluggable way; extensions?
-		if (colUuid != null)
+
+		if (cssClassBuffer.length() > 0)
 		{
-			sbuffer.append(" data-coluuid=\"" + colUuid + "\"");
+			sbuffer.append(" class=\"").append(cssClassBuffer).append("\"");
 		}
-		String cellId = getCellProperty(element, cell, HeaderToolbarElement.PROPERTY_CELL_ID);
-		if (cellId != null)
+
+		// Restrict interactivity attributes for static export
+		if (getReportContext() != null)
 		{
-			sbuffer.append(" data-cellid=\"" + cellId + "\"");
-		}
-		String tableUuid = getCellProperty(element, cell, HeaderToolbarElement.PROPERTY_TABLE_UUID);
-		if (tableUuid != null)
-		{
-			sbuffer.append(" data-tableuuid=\"" + tableUuid + "\"");
-		}
-		String columnIndex = getCellProperty(element, cell, HeaderToolbarElement.PROPERTY_COLUMN_INDEX);
-		if (columnIndex != null)
-		{
-			sbuffer.append(" data-colidx=\"" + columnIndex + "\"");
-		}
-		
-		String xtabId = getCellProperty(element, cell, CrosstabInteractiveJsonHandler.PROPERTY_CROSSTAB_ID);
-		if (xtabId != null)
-		{
-			sbuffer.append(" " + CrosstabInteractiveJsonHandler.ATTRIBUTE_CROSSTAB_ID + "=\"" 
-					+ JRStringUtil.htmlEncode(xtabId) + "\"");
-		}
-		
-		String xtabColIdx = getCellProperty(element, cell, CrosstabInteractiveJsonHandler.PROPERTY_COLUMN_INDEX);
-		if (xtabColIdx != null)
-		{
-			sbuffer.append(" " + CrosstabInteractiveJsonHandler.ATTRIBUTE_COLUMN_INDEX + "=\"" 
-					+ JRStringUtil.htmlEncode(xtabColIdx) + "\"");
+			String colUuid = getCellProperty(element, cell, HeaderToolbarElement.PROPERTY_COLUMN_UUID);//FIXMEJIVE register properties like this in a pluggable way; extensions?
+			if (colUuid != null)
+			{
+				sbuffer.append(" data-coluuid=\"" + colUuid + "\"");
+			}
+			String cellId = getCellProperty(element, cell, HeaderToolbarElement.PROPERTY_CELL_ID);
+			if (cellId != null)
+			{
+				sbuffer.append(" data-cellid=\"" + cellId + "\"");
+			}
+			String tableUuid = getCellProperty(element, cell, HeaderToolbarElement.PROPERTY_TABLE_UUID);
+			if (tableUuid != null)
+			{
+				sbuffer.append(" data-tableuuid=\"" + tableUuid + "\"");
+			}
+			String columnIndex = getCellProperty(element, cell, HeaderToolbarElement.PROPERTY_COLUMN_INDEX);
+			if (columnIndex != null)
+			{
+				sbuffer.append(" data-colidx=\"" + columnIndex + "\"");
+			}
+
+			String xtabId = getCellProperty(element, cell, CrosstabInteractiveJsonHandler.PROPERTY_CROSSTAB_ID);
+			if (xtabId != null)
+			{
+				sbuffer.append(" " + CrosstabInteractiveJsonHandler.ATTRIBUTE_CROSSTAB_ID + "=\""
+						+ JRStringUtil.htmlEncode(xtabId) + "\"");
+			}
+
+			String xtabColIdx = getCellProperty(element, cell, CrosstabInteractiveJsonHandler.PROPERTY_COLUMN_INDEX);
+			if (xtabColIdx != null)
+			{
+				sbuffer.append(" " + CrosstabInteractiveJsonHandler.ATTRIBUTE_COLUMN_INDEX + "=\""
+						+ JRStringUtil.htmlEncode(xtabColIdx) + "\"");
+			}
 		}
 		
 		return sbuffer.length() > 0 ? sbuffer.toString() : null;
@@ -1660,6 +1728,21 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		return null;
 	}
 
+	protected Color appendOwnBackcolorStyle(TableCell cell, StringBuilder styleBuffer, JRStyle style)
+	{
+		Color cellBackcolor = cell.getBackcolor();
+		if (cellBackcolor != null && !matchesBackcolor(cellBackcolor) && !cellBackcolor.equals(style.getBackcolor()))
+		{
+			styleBuffer.append("background-color: ");
+			styleBuffer.append(JRColorUtil.getCssColor(cellBackcolor));
+			styleBuffer.append("; ");
+
+			return cellBackcolor;
+		}
+
+		return null;
+	}
+
 	protected boolean appendBorderStyle(JRLineBox box, StringBuilder styleBuffer)
 	{
 		boolean addedToStyle = false;
@@ -1698,9 +1781,10 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 					tpw == lpw &&											// same line width
 					tpw == bpw &&
 					tpw == rpw &&
+					(tpc == null || (tpc != null &&
 					tpc.equals(box.getLeftPen().getLineColor()) &&			// same line color
 					tpc.equals(box.getBottomPen().getLineColor()) &&
-					tpc.equals(box.getRightPen().getLineColor())) 
+					tpc.equals(box.getRightPen().getLineColor()))))
 			{
 				addedToStyle |= appendPen(
 						styleBuffer,
@@ -1733,68 +1817,281 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		
 		return addedToStyle;
 	}
-	
+
+	protected boolean appendOwnBorderStyle(JRLineBox box, StringBuilder styleBuffer, JRStyle elementStyle)
+	{
+		boolean addedToStyle = false;
+
+		if (box != null)
+		{
+			float tpw = -1f, lpw = -1f, bpw = -1f, rpw = -1f;
+			LineStyleEnum tps = null, lps = null, bps = null, rps = null;
+			Color tpc = null, lpc = null, bpc = null, rpc = null;
+
+			JRLineBox styleBox = elementStyle.getLineBox();
+			if (styleBox != null)
+			{
+				if (box.getTopPen().getOwnLineWidth() != null
+						&& !box.getTopPen().getOwnLineWidth().equals(styleBox.getTopPen().getLineWidth()))
+				{
+					tpw = box.getTopPen().getOwnLineWidth().floatValue();
+				}
+				if (box.getLeftPen().getOwnLineWidth() != null
+						&& !box.getLeftPen().getOwnLineWidth().equals(styleBox.getLeftPen().getLineWidth()))
+				{
+					lpw = box.getLeftPen().getOwnLineWidth().floatValue();
+				}
+				if (box.getBottomPen().getOwnLineWidth() != null
+						&& !box.getBottomPen().getOwnLineWidth().equals(styleBox.getBottomPen().getLineWidth()))
+				{
+					bpw = box.getBottomPen().getOwnLineWidth().floatValue();
+				}
+				if (box.getRightPen().getOwnLineWidth() != null
+						&& !box.getRightPen().getOwnLineWidth().equals((styleBox.getRightPen().getLineWidth())))
+				{
+					rpw = box.getRightPen().getOwnLineWidth().floatValue();
+				}
+
+				if (box.getTopPen().getOwnLineStyleValue() != styleBox.getTopPen().getLineStyleValue())
+				{
+					tps = box.getTopPen().getOwnLineStyleValue();
+				}
+				if (box.getLeftPen().getOwnLineStyleValue() != styleBox.getLeftPen().getLineStyleValue())
+				{
+					lps = box.getLeftPen().getOwnLineStyleValue();
+				}
+				if (box.getBottomPen().getOwnLineStyleValue() != styleBox.getBottomPen().getLineStyleValue())
+				{
+					bps = box.getBottomPen().getOwnLineStyleValue();
+				}
+				if (box.getRightPen().getOwnLineStyleValue() != styleBox.getRightPen().getLineStyleValue())
+				{
+					rps = box.getRightPen().getOwnLineStyleValue();
+				}
+
+				if (box.getTopPen().getOwnLineColor() != null
+						&& !box.getTopPen().getOwnLineColor().equals(styleBox.getTopPen().getLineColor()))
+				{
+					tpc = box.getTopPen().getOwnLineColor();
+				}
+				if (box.getLeftPen().getOwnLineColor() != null
+						&& !box.getLeftPen().getOwnLineColor().equals(styleBox.getLeftPen().getLineColor()))
+				{
+					lpc = box.getLeftPen().getOwnLineColor();
+				}
+				if (box.getBottomPen().getOwnLineColor() != null
+						&& !box.getBottomPen().getOwnLineColor().equals(styleBox.getBottomPen().getLineColor()))
+				{
+					bpc = box.getBottomPen().getOwnLineColor();
+				}
+				if (box.getRightPen().getOwnLineColor() != null
+						&& !box.getRightPen().getOwnLineColor().equals(styleBox.getRightPen().getLineColor()))
+				{
+					rpc = box.getRightPen().getOwnLineColor();
+				}
+			}
+			else
+			{
+				tpw = box.getTopPen().getLineWidth().floatValue();
+				lpw = box.getLeftPen().getLineWidth().floatValue();
+				bpw = box.getBottomPen().getLineWidth().floatValue();
+				rpw = box.getRightPen().getLineWidth().floatValue();
+
+				tps = box.getTopPen().getLineStyleValue();
+				lps = box.getLeftPen().getLineStyleValue();
+				bps = box.getBottomPen().getLineStyleValue();
+				rps = box.getRightPen().getLineStyleValue();
+
+				tpc = box.getTopPen().getLineColor();
+				lpc = box.getLeftPen().getLineColor();
+				bpc = box.getBottomPen().getLineColor();
+				rpc = box.getRightPen().getLineColor();
+			}
+
+			if (0f < tpw && tpw < 1f)
+			{
+				tpw = 1f;
+			}
+			if (0f < lpw && lpw < 1f)
+			{
+				lpw = 1f;
+			}
+			if (0f < bpw && bpw < 1f)
+			{
+				bpw = 1f;
+			}
+			if (0f < rpw && rpw < 1f)
+			{
+				rpw = 1f;
+			}
+
+			// try to compact all borders into one css property
+			if (tps == lps &&												// same line style
+					tps == bps &&
+					tps == rps &&
+					tpw == lpw &&											// same line width
+					tpw == bpw &&
+					tpw == rpw &&
+					(tpc == null || (tpc != null &&
+					tpc.equals(lpc) &&										// same line color
+					tpc.equals(bpc) &&
+					tpc.equals(rpc))))
+			{
+				addedToStyle |= appendOwnPen(styleBuffer, tpw, tps, tpc, null);
+			}
+			else
+			{
+				addedToStyle |= appendOwnPen(styleBuffer, tpw, tps, tpc, "top");
+				addedToStyle |= appendOwnPen(styleBuffer, lpw, lps, lpc, "left");
+				addedToStyle |= appendOwnPen(styleBuffer, bpw, bps, bpc, "bottom");
+				addedToStyle |= appendOwnPen(styleBuffer, rpw, rps, rpc, "right");
+			}
+		}
+
+		return addedToStyle;
+	}
+
 	protected boolean appendPen(StringBuilder sb, JRPen pen, String side)
 	{
 		boolean addedToStyle = false;
-		
 		float borderWidth = pen.getLineWidth().floatValue();
-		if (0f < borderWidth && borderWidth < 1f)
-		{
-			borderWidth = 1f;
-		}
-
-		String borderStyle = null;
-		switch (pen.getLineStyleValue())
-		{
-			case DOUBLE :
-			{
-				borderStyle = "double";
-				break;
-			}
-			case DOTTED :
-			{
-				borderStyle = "dotted";
-				break;
-			}
-			case DASHED :
-			{
-				borderStyle = "dashed";
-				break;
-			}
-			case SOLID :
-			default :
-			{
-				borderStyle = "solid";
-				break;
-			}
-		}
 
 		if (borderWidth > 0f)
 		{
-			sb.append("border");
-			if (side != null)
+			if (0f < borderWidth && borderWidth < 1f)
 			{
-				sb.append("-");
-				sb.append(side);
+				borderWidth = 1f;
 			}
 
-			sb.append(": ");
-			sb.append(toSizeUnit((int)borderWidth));
-			
-			sb.append(" ");
-			sb.append(borderStyle);
+			StringBuilder borderProp = new StringBuilder("border");
+			if (side != null)
+			{
+				borderProp.append("-");
+				borderProp.append(side);
+			}
 
-			sb.append(" ");
-			sb.append(JRColorUtil.getCssColor(pen.getLineColor()));
-			sb.append("; ");
+			// compact form makes sense only when all three attributes(width, style, color) are specified
+			if (pen.getLineStyleValue() != null && pen.getLineColor() != null)
+			{
+				sb.append(borderProp);
+				sb.append(": ");
+				sb.append(toSizeUnit((int)borderWidth));
+
+				sb.append(" ");
+				sb.append(pen.getLineStyleValue().getName().toLowerCase());
+
+				sb.append(" ");
+				sb.append(JRColorUtil.getCssColor(pen.getLineColor()));
+				sb.append("; ");
+			}
+			else
+			{
+				sb.append(borderProp);
+				sb.append("-width: ");
+				sb.append(toSizeUnit((int)borderWidth));
+				sb.append("; ");
+
+				if (pen.getLineStyleValue() != null)
+				{
+					sb.append(borderProp);
+					sb.append("-style: ");
+					sb.append(pen.getLineStyleValue().getName().toLowerCase());
+					sb.append("; ");
+				}
+
+				if (pen.getLineColor() != null)
+				{
+					sb.append(borderProp);
+					sb.append("-color: ");
+					sb.append(JRColorUtil.getCssColor(pen.getLineColor()));
+					sb.append("; ");
+				}
+			}
 
 			addedToStyle = true;
 		}
 
 		return addedToStyle;
 	}
-	
+
+	protected boolean appendOwnPen(StringBuilder sb, float borderWidth, LineStyleEnum lineStyle, Color lineColor, String side)
+	{
+		boolean addedToStyle = false;
+		boolean sameBorderWidth = borderWidth == -1f;
+
+		if (borderWidth == 0f) // when border width is 0, other properties do not matter
+		{
+			sb.append("border");
+			if (side != null)
+			{
+				sb.append("-").append(side);
+			}
+			sb.append("-width: ").append(toSizeUnit(borderWidth)).append(";");
+
+			addedToStyle = true;
+		}
+		else
+		{
+			StringBuilder borderProp = new StringBuilder("border");
+			if (side != null)
+			{
+				borderProp.append("-");
+				borderProp.append(side);
+			}
+
+			// compact form makes sense only when all three attributes(width, style, color) are specified
+			if (!sameBorderWidth && lineStyle != null && lineColor != null)
+			{
+				sb.append(borderProp);
+				sb.append(": ");
+				sb.append(toSizeUnit(borderWidth));
+
+				sb.append(" ");
+				sb.append(lineStyle.getName().toLowerCase());
+
+				sb.append(" ");
+				sb.append(JRColorUtil.getCssColor(lineColor));
+				sb.append("; ");
+
+				addedToStyle = true;
+			}
+			else
+			{
+				if (!sameBorderWidth)
+				{
+					sb.append(borderProp);
+					sb.append("-width: ");
+					sb.append(toSizeUnit(borderWidth));
+					sb.append("; ");
+
+					addedToStyle = true;
+				}
+
+				if (lineStyle != null)
+				{
+					sb.append(borderProp);
+					sb.append("-style: ");
+					sb.append(lineStyle.getName().toLowerCase());
+					sb.append("; ");
+
+					addedToStyle = true;
+				}
+
+				if (lineColor != null)
+				{
+					sb.append(borderProp);
+					sb.append("-color: ");
+					sb.append(JRColorUtil.getCssColor(lineColor));
+					sb.append("; ");
+
+					addedToStyle = true;
+				}
+			}
+		}
+
+		return  addedToStyle;
+	}
+
 	protected boolean appendPaddingStyle(JRLineBox box, StringBuilder styleBuffer)
 	{
 		boolean addedToStyle = false;
@@ -1807,7 +2104,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			Integer rp = box.getRightPadding();
 			
 			// try to compact all paddings into one css property
-			if (tp == lp && tp == bp && tp == rp)
+			if (tp.equals(lp) && tp.equals(bp) && tp.equals(rp))
 			{
 				addedToStyle |= appendPadding(
 						styleBuffer,
@@ -1841,12 +2138,64 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		
 		return addedToStyle;
 	}
-	
+
+	protected boolean appendOwnPaddingStyle(JRLineBox box, StringBuilder styleBuffer,  JRStyle elementStyle)
+	{
+		boolean addedToStyle = false;
+
+		if (box != null)
+		{
+			Integer tp = null, lp = null, bp = null, rp = null;
+			JRLineBox styleBox = elementStyle.getLineBox();
+
+			if (styleBox != null)
+			{
+				if (!box.getTopPadding().equals(styleBox.getTopPadding()))
+				{
+					tp = box.getTopPadding();
+				}
+				if (!box.getLeftPadding().equals(styleBox.getLeftPadding()))
+				{
+					lp = box.getLeftPadding();
+				}
+				if (!box.getBottomPadding().equals(styleBox.getBottomPadding()))
+				{
+					bp = box.getBottomPadding();
+				}
+				if (!box.getRightPadding().equals(styleBox.getRightPadding()))
+				{
+					rp = box.getRightPadding();
+				}
+			}
+			else
+			{
+				tp = box.getTopPadding();
+				lp = box.getLeftPadding();
+				bp = box.getBottomPadding();
+				rp = box.getRightPadding();
+			}
+
+			// try to compact all paddings into one css property
+			if (tp != null && tp.equals(lp) && tp.equals(bp) && tp.equals(rp))
+			{
+				addedToStyle |= appendPadding(styleBuffer, tp, null);
+			} else
+			{
+				addedToStyle |= appendPadding(styleBuffer, tp, "top");
+				addedToStyle |= appendPadding(styleBuffer, lp, "left");
+				addedToStyle |= appendPadding(styleBuffer, bp, "bottom");
+				addedToStyle |= appendPadding(styleBuffer, rp, "right");
+			}
+		}
+
+		return addedToStyle;
+	}
+
 	protected boolean appendPadding(StringBuilder sb, Integer padding, String side)
 	{
 		boolean addedToStyle = false;
 		
-		if (padding.intValue() > 0)
+		if (padding != null && padding.intValue() > 0)
 		{
 			sb.append("padding");
 			if (side != null)
@@ -2233,7 +2582,8 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 				writer.write("</span>");
 			}
 
-			exportStyledTextRun(
+			exportOwnStyledTextRun(
+				printText,
 				attributes,
 				text.substring(iterator.getIndex(), runLimit),
 				tooltip,
@@ -2258,7 +2608,8 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		}
 	}
 	
-	protected void exportStyledTextRun(
+	protected void exportOwnStyledTextRun(
+			JRPrintText printText,
 			Map<Attribute,Object> attributes,
 			String text,
 			String tooltip,
@@ -2270,6 +2621,11 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			boolean hyperlinkStarted
 			) throws IOException
 	{
+		JRStyle style = printText.getStyle();
+		if (style == null) {
+			style = getDefaultStyle();
+		}
+
 		boolean isBold = TextAttribute.WEIGHT_BOLD.equals(attributes.get(TextAttribute.WEIGHT));
 		boolean isItalic = TextAttribute.POSTURE_OBLIQUE.equals(attributes.get(TextAttribute.POSTURE));
 
@@ -2286,19 +2642,19 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			{
 				HtmlExporterOutput output = getExporterOutput();
 				@SuppressWarnings("deprecation")
-				HtmlResourceHandler fontHandler = 
+				HtmlResourceHandler fontHandler =
 					output.getFontHandler() == null
 					? getFontHandler()
 					: output.getFontHandler();
 				@SuppressWarnings("deprecation")
-				HtmlResourceHandler resourceHandler = 
+				HtmlResourceHandler resourceHandler =
 					getExporterOutput().getResourceHandler() == null
 					? getResourceHandler()
 					: getExporterOutput().getResourceHandler();
 				if (fontHandler != null && resourceHandler != null)
 				{
 					HtmlFont htmlFont = HtmlFont.getInstance(locale, fontInfo, isBold, isItalic);
-					
+
 					if (htmlFont != null)
 					{
 						if (!fontsToProcess.containsKey(htmlFont.getId()))
@@ -2307,7 +2663,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 
 							HtmlFontUtil.getInstance(jasperReportsContext).handleHtmlFont(resourceHandler, htmlFont);
 						}
-						
+
 						fontFamily = htmlFont.getId();
 					}
 				}
@@ -2317,7 +2673,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 				fontFamily = exportFont;
 			}
 		}
-			
+
 		boolean localHyperlink = false;
 		JRPrintHyperlink hyperlink = (JRPrintHyperlink)attributes.get(JRTextAttribute.HYPERLINK);
 		if (!hyperlinkStarted && hyperlink != null)
@@ -2325,30 +2681,46 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			localHyperlink = startHyperlink(hyperlink);
 		}
 
-		writer.write("<span style=\"font-family: ");
-		writer.write(fontFamily);
-		writer.write("; ");
+		StringBuilder sb = new StringBuilder();
+		writer.write("<span");
+		if (style.getFontName() != fontFamilyAttr)
+		{
+			sb.append("font-family: ");
+			sb.append(fontFamily);
+			sb.append("; ");
+		}
 
 		Color forecolor = (Color)attributes.get(TextAttribute.FOREGROUND);
-		if (!hyperlinkStarted || !Color.black.equals(forecolor))
+		Color styleForeColor = style.getForecolor();
+		if (styleForeColor == null) {
+			styleForeColor = Color.black;
+		}
+		if (!forecolor.equals(styleForeColor) && (!hyperlinkStarted || !Color.black.equals(forecolor)))
 		{
-			writer.write("color: ");
-			writer.write(JRColorUtil.getCssColor(forecolor));
-			writer.write("; ");
+			sb.append("color: ");
+			sb.append(JRColorUtil.getCssColor(forecolor));
+			sb.append("; ");
 		}
 
 		Color runBackcolor = (Color)attributes.get(TextAttribute.BACKGROUND);
-		if (runBackcolor != null && !runBackcolor.equals(backcolor))
+		if (runBackcolor != null && !runBackcolor.equals(style.getBackcolor()) && !runBackcolor.equals(backcolor))
 		{
-			writer.write("background-color: ");
-			writer.write(JRColorUtil.getCssColor(runBackcolor));
-			writer.write("; ");
+			sb.append("background-color: ");
+			sb.append(JRColorUtil.getCssColor(runBackcolor));
+			sb.append("; ");
 		}
 
-		writer.write("font-size: ");
-		writer.write(toSizeUnit((Float)attributes.get(TextAttribute.SIZE)));
-		writer.write(";");
-			
+		Float fontSize = (Float)attributes.get(TextAttribute.SIZE);
+		Float styleFontSize = style.getFontsize();
+		if (styleFontSize == null) {
+			styleFontSize = getPropertiesUtil().getFloatProperty(JRFont.DEFAULT_FONT_SIZE);
+		}
+		if (!fontSize.equals(styleFontSize)) {
+			sb.append("font-size: ");
+			sb.append(toSizeUnit(fontSize));
+			sb.append(";");
+		}
+
 		switch (lineSpacing)
 		{
 			case SINGLE:
@@ -2356,11 +2728,11 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			{
 				if (lineSpacingFactor == 0)
 				{
-					writer.write(" line-height: 1; *line-height: normal;");
+					sb.append(" line-height: 1; *line-height: normal;");
 				}
 				else
 				{
-					writer.write(" line-height: " + lineSpacingFactor + ";");
+					sb.append(" line-height: " + lineSpacingFactor + ";");
 				}
 				break;
 			}
@@ -2368,11 +2740,11 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			{
 				if (lineSpacingFactor == 0)
 				{
-					writer.write(" line-height: 1.5;");
+					sb.append(" line-height: 1.5;");
 				}
 				else
 				{
-					writer.write(" line-height: " + lineSpacingFactor + ";");
+					sb.append(" line-height: " + lineSpacingFactor + ";");
 				}
 				break;
 			}
@@ -2380,18 +2752,18 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			{
 				if (lineSpacingFactor == 0)
 				{
-					writer.write(" line-height: 2.0;");
+					sb.append(" line-height: 2.0;");
 				}
 				else
 				{
-					writer.write(" line-height: " + lineSpacingFactor + ";");
+					sb.append(" line-height: " + lineSpacingFactor + ";");
 				}
 				break;
 			}
 			case PROPORTIONAL:
 			{
 				if (lineSpacingSize != null) {
-					writer.write(" line-height: " + lineSpacingSize.floatValue() + ";");
+					sb.append(" line-height: " + lineSpacingSize.floatValue() + ";");
 				}
 				break;
 			}
@@ -2399,48 +2771,43 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			case FIXED:
 			{
 				if (lineSpacingSize != null) {
-					writer.write(" line-height: " + lineSpacingSize.floatValue() + "px;");
+					sb.append(" line-height: " + lineSpacingSize.floatValue() + "px;");
 				}
 				break;
 			}
 		}
 
-		/*
-		if (!horizontalAlignment.equals(CSS_TEXT_ALIGN_LEFT))
+		if (isBold && !Boolean.TRUE.equals(style.isBold()))
 		{
-			writer.write(" text-align: ");
-			writer.write(horizontalAlignment);
-			writer.write(";");
+			sb.append(" font-weight: bold;");
 		}
-		*/
-
-		if (isBold)
+		if (isItalic && !Boolean.TRUE.equals(style.isItalic()))
 		{
-			writer.write(" font-weight: bold;");
+			sb.append(" font-style: italic;");
 		}
-		if (isItalic)
+		if (TextAttribute.UNDERLINE_ON.equals(attributes.get(TextAttribute.UNDERLINE)) && !Boolean.TRUE.equals(style.isUnderline()))
 		{
-			writer.write(" font-style: italic;");
+			sb.append(" text-decoration: underline;");
 		}
-		if (TextAttribute.UNDERLINE_ON.equals(attributes.get(TextAttribute.UNDERLINE)))
+		if (TextAttribute.STRIKETHROUGH_ON.equals(attributes.get(TextAttribute.STRIKETHROUGH)) && !Boolean.TRUE.equals(style.isStrikeThrough()))
 		{
-			writer.write(" text-decoration: underline;");
-		}
-		if (TextAttribute.STRIKETHROUGH_ON.equals(attributes.get(TextAttribute.STRIKETHROUGH)))
-		{
-			writer.write(" text-decoration: line-through;");
+			sb.append(" text-decoration: line-through;");
 		}
 
 		if (TextAttribute.SUPERSCRIPT_SUPER.equals(attributes.get(TextAttribute.SUPERSCRIPT)))
 		{
-			writer.write(" vertical-align: super;");
+			sb.append(" vertical-align: super;");
 		}
 		else if (TextAttribute.SUPERSCRIPT_SUB.equals(attributes.get(TextAttribute.SUPERSCRIPT)))
 		{
-			writer.write(" vertical-align: sub;");
+			sb.append(" vertical-align: sub;");
 		}
-			
-		writer.write("\"");
+
+		if (sb.length() > 0) {
+			writer.write(" style=\"");
+			writer.write(sb.toString());
+			writer.write("\"");
+		}
 
 		if (tooltip != null)
 		{
@@ -2448,7 +2815,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			writer.write(JRStringUtil.xmlEncode(tooltip));
 			writer.write("\"");
 		}
-			
+
 		writer.write(">");
 
 		writer.write(
@@ -2462,7 +2829,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			endHyperlink();
 		}
 	}
-	
+
 	protected class TableVisitor implements CellVisitor<TablePosition, Void, IOException>
 	{
 		private final Tabulator tabulator;
@@ -2515,7 +2882,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		{
 			try
 			{
-				writeText(textElement, cell);
+				writeOwnText(textElement, cell);
 			}
 			catch (IOException e)
 			{
@@ -2528,7 +2895,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		{
 			try
 			{
-				writeImage(image, cell);
+				writeOwnImage(image, cell);
 			}
 			catch (IOException e)
 			{
@@ -2545,8 +2912,8 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		{
 			try
 			{
-				writeRectangle(rectangle, cell);
-			} 
+				writeOwnRectangle(rectangle, cell);
+			}
 			catch (IOException e)
 			{
 				throw new JRRuntimeException(e);
@@ -2558,7 +2925,7 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		{
 			try
 			{
-				writeLine(line, cell);
+				writeOwnLine(line, cell);
 			}
 			catch (IOException e)
 			{
@@ -2571,8 +2938,8 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 		{
 			try
 			{
-				writeRectangle(ellipse, cell);
-			} 
+				writeOwnRectangle(ellipse, cell);
+			}
 			catch (IOException e)
 			{
 				throw new JRRuntimeException(e);
@@ -2606,4 +2973,185 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 			return HtmlExporter.this.getHyperlinkURL(link);
 		}
 	}
+
+	private void addReportStyles(StringBuilder sb) throws IOException {
+		List<JRStyle> styles = jasperPrint.getStylesList();
+
+		for (JRStyle style: styles) {
+			sb.append(getCssStyle(style));
+		}
+
+		if (jasperPrint.getDefaultStyle() == null) {
+			sb.append(getDefaultCssStyle());
+		}
+	}
+
+	private JRStyle getDefaultStyle() {
+		if (jasperPrint.getDefaultStyle() != null) {
+			return jasperPrint.getDefaultStyle();
+		}
+
+		return jrDefaultStyle;
+	}
+
+	private String getCssStyle(JRStyle style) {
+		StringBuilder sb = new StringBuilder();
+
+		/*** Base styling ***/
+		sb.append(".").append(style.getName()).append(CSS_TEXT_SUFFIX).
+				append(", .").append(style.getName()).append(CSS_GRAPHIC_SUFFIX).
+				append(", .").append(style.getName()).append(CSS_IMAGE_SUFFIX).append(" {\n");
+
+		// Color
+		Color foreColor = style.getForecolor();
+		if (foreColor == null) {
+			foreColor = Color.black;
+		}
+		sb.append("color: ").append(JRColorUtil.getCssColor(foreColor)).append(";\n");
+
+		if(style.getModeValue() != null && style.getModeValue().equals(ModeEnum.OPAQUE) && style.getBackcolor() != null) {
+			sb.append("background-color: ").append(JRColorUtil.getCssColor(style.getBackcolor())).append(";\n");
+		}
+
+		// Text
+		String fontFamily = style.getFontName();
+		Locale locale = getLocale();
+
+		FontInfo fontInfo = FontUtil.getInstance(jasperReportsContext).getFontInfo(fontFamily, locale);
+		if (fontInfo != null)
+		{
+			//fontName found in font extensions
+			FontFamily family = fontInfo.getFontFamily();
+			String exportFont = family.getExportFont(getExporterKey());
+			if (exportFont == null)
+			{
+				HtmlExporterOutput output = getExporterOutput();
+				@SuppressWarnings("deprecation")
+				HtmlResourceHandler fontHandler =
+						output.getFontHandler() == null
+								? getFontHandler()
+								: output.getFontHandler();
+				@SuppressWarnings("deprecation")
+				HtmlResourceHandler resourceHandler =
+						getExporterOutput().getResourceHandler() == null
+								? getResourceHandler()
+								: getExporterOutput().getResourceHandler();
+				if (fontHandler != null && resourceHandler != null)
+				{
+					HtmlFont htmlFont = HtmlFont.getInstance(locale, fontInfo, Boolean.TRUE.equals(style.isBold()), Boolean.TRUE.equals(style.isItalic()));
+
+					if (htmlFont != null)
+					{
+						if (!fontsToProcess.containsKey(htmlFont.getId()))
+						{
+							fontsToProcess.put(htmlFont.getId(), htmlFont);
+
+							HtmlFontUtil.getInstance(jasperReportsContext).handleHtmlFont(resourceHandler, htmlFont);
+						}
+
+						fontFamily = htmlFont.getId();
+					}
+				}
+			}
+			else
+			{
+				fontFamily = exportFont;
+			}
+		}
+
+		sb.append("font-family: ").append(fontFamily).append(";\n");
+
+		Float fontSize = style.getFontsize();
+		if (fontSize == null) {
+			fontSize = getPropertiesUtil().getFloatProperty(JRFont.DEFAULT_FONT_SIZE);
+		}
+		sb.append("font-size: ").append(toSizeUnit(fontSize)).append(";\n");
+
+		if (Boolean.TRUE.equals(style.isBold())) {
+			sb.append("font-weight: bold;\n");
+		}
+		if (Boolean.TRUE.equals(style.isItalic())) {
+			sb.append("font-style: italic;\n");
+		}
+		if (Boolean.TRUE.equals(style.isUnderline())) {
+			sb.append("text-decoration: underline;\n");
+		}
+		if (Boolean.TRUE.equals(style.isStrikeThrough())) {
+			sb.append("text-decoration: line-through;\n");
+		}
+
+		if (style.getParagraph().getFirstLineIndent() != null ) {
+			sb.append("text-indent: " + style.getParagraph().getFirstLineIndent().intValue() + "px;\n");
+		}
+
+		sb.append("}\n");
+
+		/*** Text specific styling ***/
+		sb.append(".").append(style.getName()).append(CSS_TEXT_SUFFIX).append(" {\n");
+
+		appendBorderStyle(style.getLineBox(), sb);
+		appendPaddingStyle(style.getLineBox(), sb);
+
+		// Alignment
+		if (style.getRotationValue() == null || (style.getRotationValue() != null && style.getRotationValue() == RotationEnum.NONE)) {
+			if (style.getVerticalAlignmentValue() != null && !(VerticalAlignEnum.TOP == style.getVerticalAlignmentValue())) {
+				sb.append("vertical-align: ").append(style.getVerticalAlignmentValue().getName().toLowerCase()).append(";\n");
+			}
+
+			//writing text align every time even when it's left
+			//because IE8 with transitional defaults to center
+			HorizontalAlignEnum halign = style.getHorizontalAlignmentValue() != null ? style.getHorizontalAlignmentValue() : HorizontalAlignEnum.LEFT;
+			sb.append("text-align: ").append(halign.getName().toLowerCase()).append(";\n");
+		}
+
+		sb.append("}\n");
+
+		/*** Graphic specific styling ***/
+		JRPen stylePen = style.getLinePen();
+		StringBuilder penBuffer = null;
+
+		sb.append(".").append(style.getName()).append(CSS_GRAPHIC_SUFFIX).append(" {\n");
+
+		if (stylePen.getLineWidth() != null)
+		{
+			penBuffer = new StringBuilder();
+
+			float borderWidth = stylePen.getLineWidth().floatValue();
+			if (0f < borderWidth && borderWidth < 1f)
+			{
+				borderWidth = 1f;
+			}
+
+			appendOwnPen(penBuffer, borderWidth, stylePen.getLineStyleValue(), stylePen.getLineColor(), null);
+			sb.append(penBuffer).append("}\n");
+		}
+		else // defaults
+		{
+			appendOwnPen(sb,  JRPen.LINE_WIDTH_1, LineStyleEnum.SOLID, Color.black, null);
+			sb.append("}\n");
+		}
+
+
+		/*** Image specific styling ***/
+		sb.append(".").append(style.getName()).append(CSS_IMAGE_SUFFIX).append(" {\n");
+		boolean gotBoxStyle = appendBorderStyle(style.getLineBox(), sb);
+
+		if (!gotBoxStyle && stylePen.getLineWidth() != null)
+		{
+			sb.append(penBuffer);
+		}
+
+		appendPaddingStyle(style.getLineBox(), sb);
+		sb.append("}\n");
+
+		return sb.toString();
+	}
+
+	private String getDefaultCssStyle() {
+		if (jrDefaultStyle == null) {
+			jrDefaultStyle = new JRBaseStyle(CSS_DEFAULT_STYLE_NAME);
+		}
+		return getCssStyle(jrDefaultStyle);
+	}
+
 }
