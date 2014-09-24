@@ -1506,10 +1506,13 @@ public class HtmlExporter extends AbstractHtmlExporter<HtmlReportConfiguration, 
 	{
 		startCell(cell.getColumnSpan(), cell.getRowSpan());
 
-		String dataAttr = getDataAttributes(element, cell);
-		if (dataAttr != null)
+		if (element != null)
 		{
-			writer.write(dataAttr);
+			String dataAttr = getDataAttributes(element, cell);
+			if (dataAttr != null)
+			{
+				writer.write(dataAttr);
+			}
 		}
 	}
 	
