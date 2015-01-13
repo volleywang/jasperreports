@@ -103,7 +103,7 @@ import org.apache.commons.logging.LogFactory;
  * @see net.sf.jasperreports.export.OdsReportConfiguration
  * @see net.sf.jasperreports.export.XlsReportConfiguration
  * @author Teodor Danciu (teodord@users.sourceforge.net)
- * @version $Id$
+ * @version $Id: JROdsExporter.java 7199 2014-08-27 13:58:10Z teodord $
  */
 public class JROdsExporter extends JRXlsAbstractExporter<OdsReportConfiguration, OdsExporterConfiguration, JROdsExporterContext>
 {
@@ -254,6 +254,11 @@ public class JROdsExporter extends JRXlsAbstractExporter<OdsReportConfiguration,
 		boolean isFlexibleRowHeight = getCurrentItemConfiguration().isFlexibleRowHeight();
 		tableBuilder.buildRowStyle(rowIndex, isFlexibleRowHeight ? -1 : lastRowHeight);
 		tableBuilder.buildRow(rowIndex, isFlexibleRowHeight ? -1 : lastRowHeight);
+	}
+
+	protected void addRowBreak(int rowIndex)
+	{
+		//FIXMEODS sheet.setRowBreak(rowIndex);
 	}
 
 //	@Override
@@ -661,12 +666,6 @@ public class JROdsExporter extends JRXlsAbstractExporter<OdsReportConfiguration,
 
 	@Override
 	protected void setRowLevels(XlsRowLevelInfo levelInfo, String level) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	protected void setScale(Integer scale) {
 		// TODO Auto-generated method stub
 		
 	}

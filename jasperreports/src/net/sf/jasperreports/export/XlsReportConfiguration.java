@@ -47,7 +47,7 @@ import net.sf.jasperreports.export.annotations.ExporterProperty;
  * @see JRXlsMetadataExporter
  * 
  * @author Teodor Danciu (teodord@users.sourceforge.net)
- * @version $Id$
+ * @version $Id: XlsReportConfiguration.java 7199 2014-08-27 13:58:10Z teodord $
  */
 public interface XlsReportConfiguration extends ReportExportConfiguration
 {
@@ -388,6 +388,34 @@ public interface XlsReportConfiguration extends ReportExportConfiguration
 	 * @see JRPropertiesUtil
 	 */
 	public static final String PROPERTY_IMAGE_ANCHOR_TYPE = JRXlsAbstractExporter.XLS_EXPORTER_PROPERTIES_PREFIX + "image.anchor.type";
+	
+	/**
+	 * Flag property that provides a default value for the {@link #isAutoFitPageHeight()} export setting.
+	 * If set to true, the exporter will automatically fit the print height of a sheet to the number of JasperPrint pages exported in that sheet
+	 * <br/>
+	 * Property scope:
+	 * <ul>
+	 * <li><code>Global</code></li>
+	 * <li><code>Report</code></li>
+	 * </ul>
+	 * 
+	 * @see JRPropertiesUtil
+	 */
+	public static final String PROPERTY_AUTO_FIT_PAGE_HEIGHT = JRXlsAbstractExporter.XLS_EXPORTER_PROPERTIES_PREFIX + "auto.fit.page.height";
+	
+	/**
+	 * Flag property that provides a default value for the {@link #isForcePageBreaks()} export setting.
+	 * If set to true, the exporter will automatically add a page break at the end of each page exported on the current sheet.
+	 * <br/>
+	 * Property scope:
+	 * <ul>
+	 * <li><code>Global</code></li>
+	 * <li><code>Report</code></li>
+	 * </ul>
+	 * 
+	 * @see JRPropertiesUtil
+	 */
+	public static final String PROPERTY_FORCE_PAGE_BREAKS = JRXlsAbstractExporter.XLS_EXPORTER_PROPERTIES_PREFIX + "force.page.breaks";
 
 	/**
 	 * Returns a boolean value specifying whether each report page should be written in a different XLS sheet.
@@ -844,4 +872,24 @@ public interface XlsReportConfiguration extends ReportExportConfiguration
 	 */
 	@ExporterProperty(PROPERTY_IMAGE_ANCHOR_TYPE)
 	public ImageAnchorTypeEnum getImageAnchorType();
+	
+	/**
+	 * Flag that specifies whether the fit height should be estimated automatically.
+	 * @see #PROPERTY_AUTO_FIT_PAGE_HEIGHT
+	 */
+	@ExporterProperty(
+			value=PROPERTY_AUTO_FIT_PAGE_HEIGHT,
+			booleanDefault=false
+			)
+	public Boolean isAutoFitPageHeight();
+	
+	/**
+	 * Flag that specifies whether the page breaks to be marked automatically on each sheet.
+	 * @see #PROPERTY_FORCE_PAGE_BREAKS
+	 */
+	@ExporterProperty(
+			value=PROPERTY_FORCE_PAGE_BREAKS,
+			booleanDefault=false
+			)
+	public Boolean isForcePageBreaks();
 }

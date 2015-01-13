@@ -129,12 +129,13 @@ import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.Hyperlink;
 import org.apache.poi.ss.usermodel.RichTextString;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellReference;
 
 
 /**
  * @author sanda zaharia (shertage@users.sourceforge.net)
- * @version $Id$
+ * @version $Id: JRXlsMetadataExporter.java 7199 2014-08-27 13:58:10Z teodord $
  */
 public class JRXlsMetadataExporter extends JRXlsAbstractMetadataExporter<XlsMetadataReportConfiguration, XlsMetadataExporterConfiguration, JRXlsExporterContext> 
 {
@@ -315,36 +316,11 @@ public class JRXlsMetadataExporter extends JRXlsAbstractMetadataExporter<XlsMeta
 			sheet.protectSheet(password);
 		}
 		
-		boolean isIgnorePageMargins = configuration.isIgnorePageMargins();
-		
-		if (jasperPrint.getLeftMargin() != null) {
-			sheet.setMargin((short)0, LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getLeftMargin()));
-		}
-		
-		if (jasperPrint.getRightMargin() != null) {
-			sheet.setMargin((short)1, LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getRightMargin()));
-		}
-		
-		if (jasperPrint.getTopMargin() != null)	{
-			sheet.setMargin((short)2, LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getTopMargin()));
-		}
-		
-		if (jasperPrint.getBottomMargin() != null) {
-			sheet.setMargin((short)3, LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getBottomMargin()));
-		}
+		sheet.setMargin(Sheet.LeftMargin, 0.0);
+		sheet.setMargin(Sheet.RightMargin, 0.0);
+		sheet.setMargin(Sheet.TopMargin, 0.0);
+		sheet.setMargin(Sheet.BottomMargin, 0.0);
 
-		Integer fitWidth = configuration.getFitWidth();
-		if(!isValidScale(sheetInfo.sheetPageScale) && fitWidth != null) {
-			printSetup.setFitWidth(fitWidth.shortValue());
-			sheet.setAutobreaks(true);
-		}
-		
-		Integer fitHeight = configuration.getFitHeight();
-		if(!isValidScale(sheetInfo.sheetPageScale) && fitHeight != null) {
-			printSetup.setFitHeight(fitHeight.shortValue());
-			sheet.setAutobreaks(true);
-		}
-		
 		String sheetHeaderLeft = configuration.getSheetHeaderLeft();
 		if(sheetHeaderLeft != null)	{
 			sheet.getHeader().setLeft(sheetHeaderLeft);
@@ -421,6 +397,39 @@ public class JRXlsMetadataExporter extends JRXlsAbstractMetadataExporter<XlsMeta
 
 		onePagePerSheetMap.put(sheetIndex, configuration.isOnePagePerSheet());
 		sheetsBeforeCurrentReportMap.put(sheetIndex, sheetsBeforeCurrentReport);
+	}
+
+	protected void closeSheet()	{
+		HSSFPrintSetup printSetup = sheet.getPrintSetup();
+		
+		if (isValidScale(sheetInfo.sheetPageScale))
+		{
+			printSetup.setScale((short)sheetInfo.sheetPageScale.intValue());
+		}
+		else
+		{
+			XlsReportConfiguration configuration = getCurrentItemConfiguration();
+
+			Integer fitWidth = configuration.getFitWidth();
+			if (fitWidth != null) 
+			{
+				printSetup.setFitWidth(fitWidth.shortValue());
+				sheet.setAutobreaks(true);
+			}
+
+			Integer fitHeight = configuration.getFitHeight();
+			fitHeight = 
+				fitHeight == null
+				? (Boolean.TRUE == configuration.isAutoFitPageHeight() 
+					? (pageIndex - sheetInfo.sheetFirstPageIndex)
+					: null)
+				: fitHeight;
+			if (fitHeight != null)
+			{
+				printSetup.setFitHeight(fitHeight.shortValue());
+				sheet.setAutobreaks(true);
+			}
+		}
 	}
 
 	protected void closeWorkbook(OutputStream os) throws JRException {
@@ -1567,13 +1576,6 @@ public class JRXlsMetadataExporter extends JRXlsAbstractMetadataExporter<XlsMeta
 //			}
 //		}
 	}
-	
-	protected void setScale(Integer scale) {
-		if (isValidScale(scale)) {
-			HSSFPrintSetup printSetup = sheet.getPrintSetup();
-			printSetup.setScale((short)scale.intValue());
-		}
-	}
 
 
 	private final short getSuitablePaperSize(JasperPrint jasP) {
@@ -1830,6 +1832,12 @@ public class JRXlsMetadataExporter extends JRXlsAbstractMetadataExporter<XlsMeta
 
 	@Override
 	protected void setRowHeight(int rowIndex, int lastRowHeight, Cut yCut, XlsRowLevelInfo levelInfo) throws JRException {
+	}
+
+	@Override
+	protected void addRowBreak(int rowIndex)
+	{
+		sheet.setRowBreak(rowIndex);
 	}
 
 	@Override

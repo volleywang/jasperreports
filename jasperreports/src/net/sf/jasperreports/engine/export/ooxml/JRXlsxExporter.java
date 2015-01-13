@@ -110,7 +110,7 @@ import org.apache.commons.logging.LogFactory;
  * @see net.sf.jasperreports.export.XlsExporterConfiguration
  * @see net.sf.jasperreports.export.XlsReportConfiguration
  * @author Teodor Danciu (teodord@users.sourceforge.net)
- * @version $Id$
+ * @version $Id: JRXlsxExporter.java 7199 2014-08-27 13:58:10Z teodord $
  */
 public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguration, XlsxExporterConfiguration, JRXlsxExporterContext>
 {
@@ -708,8 +708,6 @@ public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguratio
 
 	protected void closeWorkbook(OutputStream os) throws JRException //FIXMEXLSX could throw IOException here, as other implementations do
 	{
-		closeSheet();
-		
 		styleHelper.export();
 		
 		styleHelper.close();
@@ -791,8 +789,6 @@ public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguratio
 
 	protected void createSheet(CutsInfo xCuts, SheetInfo sheetInfo)
 	{
-		closeSheet();
-		
 		startPage = true;
 		currentSheetJasperPrint = jasperPrint;
 		currentSheetPageScale = sheetInfo.sheetPageScale;
@@ -849,6 +845,7 @@ public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguratio
 	}
 
 
+	@Override
 	protected void closeSheet()
 	{
 		if (sheetHelper != null)
@@ -866,7 +863,8 @@ public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguratio
 						sheetAutoFilter,
 						currentSheetPageScale, 
 						currentSheetFirstPageNumber,
-						false
+						false,
+						pageIndex - sheetInfo.sheetFirstPageIndex
 						);
 					firstPageNotSet = false;
 			}
@@ -882,9 +880,10 @@ public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguratio
 						sheetAutoFilter,
 						currentSheetPageScale, 
 						documentFirstPageNumber,
-						false
+						false,
+						pageIndex - sheetInfo.sheetFirstPageIndex
 						);
-						firstPageNotSet = false;
+					firstPageNotSet = false;
 				}
 				else
 				{
@@ -895,7 +894,8 @@ public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguratio
 						sheetAutoFilter,
 						currentSheetPageScale, 
 						null,
-						firstPageNotSet
+						firstPageNotSet,
+						pageIndex - sheetInfo.sheetFirstPageIndex
 						);
 				}
 			}
@@ -1588,6 +1588,12 @@ public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguratio
 		) throws JRException 
 	{
 		sheetHelper.exportRow(rowHeight, yCut, levelInfo);
+	}
+
+
+	protected void addRowBreak(int rowIndex) 
+	{
+		sheetHelper.addRowBreak(rowIndex);
 	}
 
 	/**

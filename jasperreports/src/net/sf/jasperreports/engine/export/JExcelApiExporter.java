@@ -141,7 +141,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * @deprecated To be removed. Use {@link JRXlsExporter} or {@link JRXlsxExporter} instead.
  * @author Manuel Paul (mpaul@ratundtat.com)
- * @version $Id$
+ * @version $Id: JExcelApiExporter.java 7199 2014-08-27 13:58:10Z teodord $
  */
 public class JExcelApiExporter extends JRXlsAbstractExporter<JxlReportConfiguration, JxlExporterConfiguration, JExcelApiExporterContext>
 {
@@ -381,6 +381,42 @@ public class JExcelApiExporter extends JRXlsAbstractExporter<JxlReportConfigurat
 		setSheetSettings(sheetInfo, sheet);
 	}
 
+	protected void closeSheet()
+	{
+		sheet = workbook.createSheet(sheetInfo.sheetName, Integer.MAX_VALUE);
+
+		if (sheetInfo.sheetPageScale != null && sheetInfo.sheetPageScale > 9 && sheetInfo.sheetPageScale < 401)
+		{
+			SheetSettings sheetSettings = sheet.getSettings();
+			sheetSettings.setScaleFactor(sheetInfo.sheetPageScale);
+			
+			/* the scale factor takes precedence over fitWidth and fitHeight properties */
+			sheetSettings.setFitWidth(0);
+			sheetSettings.setFitHeight(0);
+			sheetSettings.setFitToPages(false);
+		}
+		else
+		{
+			JxlReportConfiguration configuration = getCurrentItemConfiguration();
+
+			Integer fitWidth = configuration.getFitWidth();
+			Integer fitHeight = configuration.getFitHeight();
+			fitHeight = 
+				fitHeight == null
+				? (Boolean.TRUE == configuration.isAutoFitPageHeight() 
+					? (pageIndex - sheetInfo.sheetFirstPageIndex)
+					: null)
+				: fitHeight;
+			if (fitWidth != null || fitWidth != null)
+			{
+				SheetSettings sheetSettings = sheet.getSettings();
+				sheetSettings.setFitWidth(fitWidth == null ? 1 : fitWidth);
+				sheetSettings.setFitHeight(fitHeight == null ? 1 : fitHeight);
+				sheetSettings.setFitToPages(true);
+			}
+		}
+	}
+
 	protected void closeWorkbook(OutputStream os) throws JRException
 	{
 		if (sheet == null)//empty document
@@ -497,6 +533,11 @@ public class JExcelApiExporter extends JRXlsAbstractExporter<JxlReportConfigurat
 		}
 	}
 	
+	protected void addRowBreak(int rowIndex)
+	{
+		sheet.addRowPageBreak(rowIndex);
+	}
+
 //	protected void setCell(JRExporterGridCell gridCell, int x, int y)
 //	{
 //	}
@@ -2254,41 +2295,14 @@ public class JExcelApiExporter extends JRXlsAbstractExporter<JxlReportConfigurat
 		
 		JxlReportConfiguration configuration = getCurrentItemConfiguration();
 		
-		boolean isIgnorePageMargins = configuration.isIgnorePageMargins();
-		
-		if (jasperPrint.getTopMargin() != null)
-		{
-			sheets.setTopMargin(LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getTopMargin()));
-		}
-
-		if (jasperPrint.getLeftMargin() != null)
-		{
-			sheets.setLeftMargin(LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getLeftMargin()));
-		}
-		
-		if (jasperPrint.getRightMargin() != null)
-		{
-			sheets.setRightMargin(LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getRightMargin()));
-		}
-
-		if (jasperPrint.getBottomMargin() != null)
-		{
-			sheets.setBottomMargin(LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getBottomMargin()));
-		}
+		sheets.setTopMargin(0.0);
+		sheets.setLeftMargin(0.0);
+		sheets.setRightMargin(0.0);
+		sheets.setBottomMargin(0.0);
 
 		sheets.setHeaderMargin(0.0);
 		sheets.setFooterMargin(0.0);
 
-		Integer fitWidth = configuration.getFitWidth();
-		Integer fitHeight = configuration.getFitHeight();
-		
-		if(fitWidth != null || fitWidth != null)
-		{
-			sheets.setFitWidth(fitWidth == null ? 1 : fitWidth);
-			sheets.setFitHeight(fitHeight == null ? 1 : fitHeight);
-			sheets.setFitToPages(true);
-		}
-		
 		String password = configuration.getPassword();
 		if(password != null)
 		{
@@ -2729,20 +2743,6 @@ public class JExcelApiExporter extends JRXlsAbstractExporter<JxlReportConfigurat
 		catch (WriteException e) 
 		{
 			throw new JRRuntimeException(e);
-		}
-	}
-	
-	protected void setScale(Integer scale)
-	{
-		if (scale != null && scale > 9 && scale < 401)
-		{
-			SheetSettings sheetSettings = sheet.getSettings();
-			sheetSettings.setScaleFactor(scale);
-			
-			/* the scale factor takes precedence over fitWidth and fitHeight properties */
-			sheetSettings.setFitWidth(0);
-			sheetSettings.setFitHeight(0);
-			sheetSettings.setFitToPages(false);
 		}
 	}
 	

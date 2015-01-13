@@ -246,7 +246,7 @@ import net.sf.jasperreports.export.XlsReportConfiguration;
  * @see net.sf.jasperreports.export.XlsExporterConfiguration
  * @see net.sf.jasperreports.export.XlsReportConfiguration
  * @author Teodor Danciu (teodord@users.sourceforge.net)
- * @version $Id$
+ * @version $Id: JRXlsAbstractExporter.java 7199 2014-08-27 13:58:10Z teodord $
  */
 public abstract class JRXlsAbstractExporter<RC extends XlsReportConfiguration, C extends XlsExporterConfiguration, E extends JRExporterContext> 
 	extends JRAbstractExporter<RC, C, OutputStreamExporterOutput, E>
@@ -607,8 +607,11 @@ public abstract class JRXlsAbstractExporter<RC extends XlsReportConfiguration, C
 	
 	protected String invalidCharReplacement;
 	
+	protected SheetInfo sheetInfo;
+	
 	protected static class SheetInfo
 	{
+		public Integer sheetFirstPageIndex;
 		public String sheetName;
 		public Integer sheetFirstPageNumber;		
 		public Integer sheetPageScale;		
@@ -695,6 +698,9 @@ public abstract class JRXlsAbstractExporter<RC extends XlsReportConfiguration, C
 	protected void initExport()
 	{
 		super.initExport();
+
+		sheetIndex = 0;
+		sheetInfo = null;
 		onePagePerSheetMap.clear();
 		sheetsBeforeCurrentReport = 0;
 		sheetsBeforeCurrentReportMap.clear();
@@ -799,6 +805,7 @@ public abstract class JRXlsAbstractExporter<RC extends XlsReportConfiguration, C
 			}
 			sheetsBeforeCurrentReport = configuration.isOnePagePerSheet() ? sheetIndex : sheetsBeforeCurrentReport + 1;
 		}
+		closeSheet();
 		closeWorkbook(os);
 	}
 
@@ -1050,6 +1057,11 @@ public abstract class JRXlsAbstractExporter<RC extends XlsReportConfiguration, C
 			}
 		}
 
+		if (configuration.isForcePageBreaks())
+		{
+			addRowBreak(rowCount - skippedRows + startRow - 1);
+		}
+		
 		if(autoFilterStart != null)
 		{
 			setAutoFilter(autoFilterStart + ":" + (autoFilterEnd != null ? autoFilterEnd : autoFilterStart));
@@ -1145,12 +1157,18 @@ public abstract class JRXlsAbstractExporter<RC extends XlsReportConfiguration, C
 
 	protected void exportSheet(CutsInfo xCuts, CutsInfo yCuts, int startCutIndex, String defaultSheetName)
 	{
-		SheetInfo sheetInfo = getSheetProps(yCuts, startCutIndex);
+		if (sheetInfo != null)
+		{
+			closeSheet();
+		}
+
+		sheetInfo = getSheetProps(yCuts, startCutIndex);
 		
 		sheetInfo.sheetName = getSheetName(sheetInfo.sheetName, defaultSheetName);
 		
+		sheetInfo.sheetFirstPageIndex = pageIndex;
+		
 		createSheet(xCuts, sheetInfo);
-		setScale(sheetInfo.sheetPageScale);
 
 		// we need to count all sheets generated for all exported documents
 		sheetIndex++;
@@ -1808,11 +1826,15 @@ public abstract class JRXlsAbstractExporter<RC extends XlsReportConfiguration, C
 
 	protected abstract void createSheet(CutsInfo xCuts, SheetInfo sheetInfo);
 
+	protected abstract void closeSheet();
+
 	protected abstract void closeWorkbook(OutputStream os) throws JRException, IOException;
 
 	protected abstract void setColumnWidth(int col, int width, boolean autoFit);
 	
 	protected abstract void setRowHeight(int rowIndex, int lastRowHeight, Cut yCut, XlsRowLevelInfo levelInfo) throws JRException;
+
+	protected abstract void addRowBreak(int rowIndex);
 
 //	protected abstract void setCell(JRExporterGridCell gridCell, int colIndex, int rowIndex);
 
@@ -1839,7 +1861,5 @@ public abstract class JRXlsAbstractExporter<RC extends XlsReportConfiguration, C
 	protected abstract void setAutoFilter(String autoFilterRange);
 	
 	protected abstract void setRowLevels(XlsRowLevelInfo levelInfo, String level);
-	
-	protected abstract void setScale(Integer scale);
-	
+
 }

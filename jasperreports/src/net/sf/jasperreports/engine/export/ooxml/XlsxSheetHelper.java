@@ -25,6 +25,8 @@ package net.sf.jasperreports.engine.export.ooxml;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.sf.jasperreports.engine.JRPropertiesUtil;
 import net.sf.jasperreports.engine.JRRuntimeException;
@@ -32,7 +34,6 @@ import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReportsContext;
 import net.sf.jasperreports.engine.export.Cut;
 import net.sf.jasperreports.engine.export.JRXlsAbstractExporter;
-import net.sf.jasperreports.engine.export.LengthUtil;
 import net.sf.jasperreports.engine.export.XlsRowLevelInfo;
 import net.sf.jasperreports.engine.export.ooxml.type.PaperSizeEnum;
 import net.sf.jasperreports.engine.util.FileBufferedWriter;
@@ -41,7 +42,7 @@ import net.sf.jasperreports.export.XlsReportConfiguration;
 
 /**
  * @author Teodor Danciu (teodord@users.sourceforge.net)
- * @version $Id$
+ * @version $Id: XlsxSheetHelper.java 7199 2014-08-27 13:58:10Z teodord $
  */
 public class XlsxSheetHelper extends BaseHelper
 {
@@ -57,6 +58,8 @@ public class XlsxSheetHelper extends BaseHelper
 	private XlsxSheetRelsHelper sheetRelsHelper;//FIXMEXLSX truly embed the rels helper here and no longer have it available from outside; check drawing rels too
 	private final JRPropertiesUtil propertiesUtil;
 	private final XlsReportConfiguration configuration;
+	
+	private List<Integer> rowBreaks = new ArrayList<Integer>();
 
 	/**
 	 * 
@@ -107,12 +110,23 @@ public class XlsxSheetHelper extends BaseHelper
 		write(" xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"\n");
 		write(" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n");
 		
+		write("<sheetPr><outlinePr summaryBelow=\"0\"/>");
+		
 		/* the scale factor takes precedence over fitWidth and fitHeight properties */
-		boolean noScale = scale < 10 || scale > 400;
-		Integer fitWidth = configuration.getFitWidth();
-		Integer fitHeight = configuration.getFitHeight();
-		String fitToPage = noScale && (fitHeight != null || fitWidth != null) ? "<pageSetUpPr fitToPage=\"1\"/>" : "";
-		write("<sheetPr><outlinePr summaryBelow=\"0\"/>" + fitToPage + "</sheetPr><dimension ref=\"A1\"/><sheetViews><sheetView workbookViewId=\"0\"");
+		if (
+			(scale < 10 || scale > 400)
+			&& (
+				configuration.getFitWidth() != null 
+				|| configuration.getFitHeight() != null
+				|| Boolean.TRUE == configuration.isAutoFitPageHeight()
+				)
+			)
+		{
+			write("<pageSetUpPr fitToPage=\"1\"/>");
+		}
+		
+		write("</sheetPr><dimension ref=\"A1\"/><sheetViews><sheetView workbookViewId=\"0\"");
+		
 		if(!showGridlines)
 		{
 			write(" showGridLines=\"0\"");
@@ -186,7 +200,9 @@ public class XlsxSheetHelper extends BaseHelper
 			String autoFilter,
 			Integer scale,
 			Integer firstPageNumber,
-			boolean firstPageNotSet)
+			boolean firstPageNotSet, 
+			Integer sheetPageCount
+			)
 	{
 		if (rowIndex > 0)
 		{
@@ -223,13 +239,17 @@ public class XlsxSheetHelper extends BaseHelper
 		}
 
 		write("<pageMargins left=\"");
-		write(String.valueOf(jasperPrint.getLeftMargin() == null ? 0.7f : LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getLeftMargin()))); 
+//		write(String.valueOf(jasperPrint.getLeftMargin() == null ? 0.7f : LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getLeftMargin()))); 
+		write("0");
 		write("\" right=\"");
-		write(String.valueOf(jasperPrint.getRightMargin() == null ? 0.7f : LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getRightMargin()))); 
+//		write(String.valueOf(jasperPrint.getRightMargin() == null ? 0.7f : LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getRightMargin()))); 
+		write("0");
 		write("\" top=\"");
-		write(String.valueOf(jasperPrint.getTopMargin() == null ? 0.75f : LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getTopMargin()))); 
+//		write(String.valueOf(jasperPrint.getTopMargin() == null ? 0.75f : LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getTopMargin()))); 
+		write("0");
 		write("\" bottom=\"");
-		write(String.valueOf(jasperPrint.getBottomMargin() == null ? 0.75f : LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getBottomMargin()))); 
+//		write(String.valueOf(jasperPrint.getBottomMargin() == null ? 0.75f : LengthUtil.inchNoRound(isIgnorePageMargins ? 0 : jasperPrint.getBottomMargin()))); 
+		write("0");
 		write("\" header=\"0.0\" footer=\"0.0\"/>\n");
 		
 		write("<pageSetup");	
@@ -247,12 +267,18 @@ public class XlsxSheetHelper extends BaseHelper
 		else
 		{
 			Integer fitWidth = configuration.getFitWidth();
-			if(fitWidth != null && fitWidth !=  1)
+			if (fitWidth != null && fitWidth !=  1)
 			{
 				write(" fitToWidth=\"" + fitWidth + "\"");
 			}
 			Integer fitHeight = configuration.getFitHeight();
-			if(fitHeight != null && fitHeight != 1)
+			fitHeight = 
+				fitHeight == null
+				? (Boolean.TRUE == configuration.isAutoFitPageHeight() 
+					? sheetPageCount
+					: null)
+				: fitHeight;
+			if (fitHeight != null && fitHeight != 1)
 			{
 				write(" fitToHeight=\"" + fitHeight + "\"");
 			}
@@ -272,6 +298,16 @@ public class XlsxSheetHelper extends BaseHelper
 			write("/>\n");	
 		}
 		
+		if (rowBreaks.size() > 0)
+		{
+			write("<rowBreaks count=\"" + rowBreaks.size() + "\" manualBreakCount=\"" + rowBreaks.size() + "\">");
+			for (Integer rowBreakIndex : rowBreaks)
+			{
+				write("<brk id=\"" + (rowBreakIndex + 1) + "\" man=\"1\"/>");
+			}
+			write("</rowBreaks>");
+		}
+
 		if(!firstPageNotSet)
 		{
 			//TODO: support for customized headers/footers in XLSX
@@ -408,6 +444,11 @@ public class XlsxSheetHelper extends BaseHelper
 		}
 	}
 	
+	public void addRowBreak(int rowIndex)
+	{
+		rowBreaks.add(rowIndex);
+	}
+
 	private final byte getSuitablePaperSize(JasperPrint jasP)
 	{
 
