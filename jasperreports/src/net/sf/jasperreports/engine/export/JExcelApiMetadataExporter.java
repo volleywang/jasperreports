@@ -243,6 +243,8 @@ public class JExcelApiMetadataExporter extends JRXlsAbstractMetadataExporter<Jxl
 		{
 			initCustomPalette();
 		}
+		
+		sheet = null;
 	}
 	
 
@@ -378,7 +380,10 @@ public class JExcelApiMetadataExporter extends JRXlsAbstractMetadataExporter<Jxl
 
 	protected void closeSheet()
 	{
-		sheet = workbook.createSheet(sheetInfo.sheetName, Integer.MAX_VALUE);
+		if (sheet == null)
+		{
+			return;
+		}
 
 		if (sheetInfo.sheetPageScale != null && sheetInfo.sheetPageScale > 9 && sheetInfo.sheetPageScale < 401)
 		{
