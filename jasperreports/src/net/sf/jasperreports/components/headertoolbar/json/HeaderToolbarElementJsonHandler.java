@@ -344,7 +344,7 @@ public class HeaderToolbarElementJsonHandler implements GenericElementJsonHandle
 			JRDesignTextField detailTextField = TableUtil.getCellElement(JRDesignTextField.class, column.getDetailCell(), true);
 			if (detailTextField != null)
 			{
-				ConditionalFormattingData detailCfd = getConditionalFormattingData(jrContext, dataset, tableUUID, detailTextField, null,
+				ConditionalFormattingData detailCfd = getConditionalFormattingData(element, jrContext, dataset, detailTextField, null,
 						locale, timeZone);
 				if (detailCfd != null)
 				{
@@ -827,10 +827,10 @@ public class HeaderToolbarElementJsonHandler implements GenericElementJsonHandle
 				textField == null 
 					? null 
 					: getConditionalFormattingData(
+						null,
 						jasperReportsContext, 
-						dataset, 
-						tableUuid, 
-						textField, 
+						dataset,
+						textField,
 						groupInfo.getName(),
 						locale,
 						timeZone
@@ -852,9 +852,9 @@ public class HeaderToolbarElementJsonHandler implements GenericElementJsonHandle
 	}
 
 	private static ConditionalFormattingData getConditionalFormattingData(
+		JRGenericPrintElement element,
 		JasperReportsContext jasperReportsContext, 
 		JRDesignDataset dataset,
-		String tableUuid,
 		JRDesignTextField textField,
 		String groupName,
 		Locale locale,
@@ -862,8 +862,23 @@ public class HeaderToolbarElementJsonHandler implements GenericElementJsonHandle
 		) 
 	{
 		FilterTypesEnum conditionType = null;
-		
-		String conditionTypeProp = textField.getPropertiesMap().getProperty(HeaderToolbarElement.PROPERTY_CONDTION_TYPE);
+		String conditionTypeProp;
+
+		// only for the detail values the element will not be null
+		if (element != null) {
+			conditionTypeProp = element.getPropertiesMap().getProperty(HeaderToolbarElement.PROPERTY_FILTER_TYPE);
+
+			if (element.getPropertiesMap().containsProperty(HeaderToolbarElement.PROPERTY_COLUMN_FIELD)) {
+				textField.getPropertiesMap().setProperty(HeaderToolbarElement.PROPERTY_COLUMN_FIELD, element.getPropertiesMap().getProperty(HeaderToolbarElement.PROPERTY_COLUMN_FIELD));
+			} else if (element.getPropertiesMap().containsProperty(HeaderToolbarElement.PROPERTY_COLUMN_VARIABLE)) {
+				textField.getPropertiesMap().setProperty(HeaderToolbarElement.PROPERTY_COLUMN_VARIABLE, element.getPropertiesMap().getProperty(HeaderToolbarElement.PROPERTY_COLUMN_VARIABLE));
+			}
+
+		} else {
+			conditionTypeProp = textField.getPropertiesMap().getProperty(HeaderToolbarElement.PROPERTY_CONDTION_TYPE);
+		}
+
+
 		if (conditionTypeProp == null)
 		{
 			JRExpression expression = textField.getExpression();
