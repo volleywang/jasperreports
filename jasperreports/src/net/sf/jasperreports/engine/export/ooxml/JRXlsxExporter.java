@@ -1375,7 +1375,8 @@ public class JRXlsxExporter extends JRXlsAbstractExporter<XlsxReportConfiguratio
 			getTextLocale(text), 
 			isWrapText(gridCell.getElement()) || Boolean.TRUE.equals(((JRXlsxExporterNature)nature).getColumnAutoFit(gridCell.getElement())), 
 			isCellHidden(gridCell.getElement()), 
-			isCellLocked(gridCell.getElement())
+			isCellLocked(gridCell.getElement()),
+			text.getRotationValue()
 			);
 		sheetHelper.exportMergedCells(rowIndex, colIndex, gridCell.getRowSpan(), gridCell.getColSpan());
 

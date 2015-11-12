@@ -37,6 +37,7 @@ import net.sf.jasperreports.engine.export.data.StringTextValue;
 import net.sf.jasperreports.engine.export.data.TextValue;
 import net.sf.jasperreports.engine.export.data.TextValueHandler;
 import net.sf.jasperreports.engine.type.VerticalAlignEnum;
+import net.sf.jasperreports.engine.type.RotationEnum;
 
 
 /**
@@ -92,7 +93,7 @@ public class XlsxCellHelper extends BaseHelper
 		int colIndex 
 		) 
 	{
-		exportHeader(gridCell, rowIndex, colIndex, null, null, null, true, false, false);
+	    exportHeader(gridCell, rowIndex, colIndex, null, null, null, true, false, false, RotationEnum.NONE);
 	}
 
 	/**
@@ -107,7 +108,8 @@ public class XlsxCellHelper extends BaseHelper
 		Locale locale,
 		boolean isWrapText,
 		boolean isHidden,
-		boolean isLocked
+		boolean isLocked,
+		RotationEnum rotation
 		) 
 	{
 		try
@@ -126,7 +128,7 @@ public class XlsxCellHelper extends BaseHelper
 			throw new JRRuntimeException(e);
 		}
 
-		write("  <c r=\"" + getColumIndexLetter(colIndex) + (rowIndex + 1) + "\" s=\"" + styleHelper.getCellStyle(gridCell, pattern, locale, isWrapText, isHidden, isLocked) + "\"");
+		write("  <c r=\"" + getColumIndexLetter(colIndex) + (rowIndex + 1) + "\" s=\"" + styleHelper.getCellStyle(gridCell, pattern, locale, isWrapText, isHidden, isLocked, rotation) + "\"");
 		String type = textValueHandler.getType();
 		if (type != null)
 		{
