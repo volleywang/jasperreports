@@ -226,6 +226,8 @@ public abstract class JRBaseFiller extends BaseReportFiller implements JRDefault
 	protected boolean isLastPageFooter;
 
 	protected boolean isReorderBandElements;
+	
+	protected int usedPageHeight = 0;
 
 	/**
 	 *
@@ -874,7 +876,7 @@ public abstract class JRBaseFiller extends BaseReportFiller implements JRDefault
 	protected abstract void fillReport() throws JRException;
 
 	@Override
-	protected void ignorePaginationSet()
+	protected void ignorePaginationSet(Map<String, Object> parameterValues)
 	{
 		if (ignorePagination)
 		{
@@ -892,8 +894,49 @@ public abstract class JRBaseFiller extends BaseReportFiller implements JRDefault
 			
 			if (isMasterReport() || !bandReportParent.isParentPagination())//subreport page height is already set by band master
 			{
-				setPageHeight(PAGE_HEIGHT_PAGINATION_IGNORED);
+				int maxPageHeight = getMaxPageHeight(parameterValues);
+				setPageHeight(maxPageHeight);
 			}
+		}
+	}
+	
+	protected int getMaxPageHeight(Map<String,Object> parameterValues)
+	{
+		int maxPageHeight;
+		Integer maxPageHeightParam = (Integer) parameterValues.get(JRParameter.MAX_PAGE_HEIGHT);
+		if (maxPageHeightParam != null)
+		{
+			maxPageHeight = maxPageHeightParam;
+		}
+		else
+		{
+			maxPageHeight = propertiesUtil.getIntegerProperty(jasperReport, JRParameter.MAX_PAGE_HEIGHT, PAGE_HEIGHT_PAGINATION_IGNORED);
+		}
+		
+		if (maxPageHeight < pageHeight)
+		{
+			if (log.isDebugEnabled())
+			{
+				log.debug("max page height " + maxPageHeight + " smaller than report page height " + pageHeight);
+			}
+			
+			//use the report page height
+			maxPageHeight = pageHeight;
+		}
+		
+		if (log.isDebugEnabled())
+		{
+			log.debug("max page height is " + maxPageHeight);
+		}
+		
+		return maxPageHeight;
+	}
+	
+	protected void recordUsedPageHeight(int pageHeight)
+	{
+		if (pageHeight > usedPageHeight)
+		{
+			usedPageHeight = pageHeight;
 		}
 	}
 
