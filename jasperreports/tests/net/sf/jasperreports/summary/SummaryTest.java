@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with JasperReports. If not, see <http://www.gnu.org/licenses/>.
  */
-package net.sf.jasperreports.groups.footerposition;
+package net.sf.jasperreports.summary;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -58,9 +58,9 @@ import net.sf.jasperreports.export.SimpleXmlExporterOutput;
 /**
  * @author Teodor Danciu (teodord@users.sourceforge.net)
  */
-public class FooterPositionTest
+public class SummaryTest
 {
-	private static final Log log = LogFactory.getLog(FooterPositionTest.class);
+	private static final Log log = LogFactory.getLog(SummaryTest.class);
 	
 	private JasperFillManager fillManager;
 
@@ -79,9 +79,9 @@ public class FooterPositionTest
 		params.put(JRParameter.REPORT_LOCALE, Locale.US);
 		params.put(JRParameter.REPORT_TIME_ZONE, TimeZone.getTimeZone("GMT"));
 		
-		for (int i = 1; i <= 29; i++)
+		for (int i = 1; i <= 19; i++)
 		{
-			String jrxmlFileName = "net/sf/jasperreports/groups/footerposition/repo/FooterPositionReport." + i + ".jrxml";
+			String jrxmlFileName = "net/sf/jasperreports/summary/repo/SummaryReport." + i + ".jrxml";
 			
 			JasperReport report = compileReport(jrxmlFileName);
 			
@@ -91,7 +91,7 @@ public class FooterPositionTest
 			String xmlExportDigest = xmlExportDigest(print);
 			log.debug("Plain report got " + xmlExportDigest);
 			
-			String referenceXmlExportDigest = getFileDigest("net/sf/jasperreports/groups/footerposition/repo/FooterPositionReport." + i + ".reference.jrpxml");
+			String referenceXmlExportDigest = getFileDigest("net/sf/jasperreports/summary/repo/SummaryReport." + i + ".reference.jrpxml");
 			
 			assert xmlExportDigest.equals(referenceXmlExportDigest);
 		}

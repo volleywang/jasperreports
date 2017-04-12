@@ -73,7 +73,7 @@ public class KeepTogetherTest
 	}
 
 	@Test
-	public void keepTogetherReports() throws JRException, NoSuchAlgorithmException, IOException
+	public void testReports() throws JRException, NoSuchAlgorithmException, IOException
 	{
 		HashMap<String, Object> params = new HashMap<String, Object>();
 		params.put(JRParameter.REPORT_LOCALE, Locale.US);
